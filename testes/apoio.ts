@@ -23,12 +23,29 @@ export async function bancoDeTeste() {
     },
     tx: (_usuario, fn) =>
       db.transaction((t) =>
-        fn({ query: async (sql, params) => { const r = await t.query<any>(sql, params as any[]); return { rows: r.rows, rowCount: r.rows.length || r.affectedRows || 0 }; } }),
+        fn({
+          query: async (sql, params) => {
+            const r = await t.query<any>(sql, params as any[]);
+            return { rows: r.rows, rowCount: r.rows.length || r.affectedRows || 0 };
+          },
+        }),
       ),
     motor: {
-      query: async (sql, params) => { const r = await db.query<any>(sql, params as any[]); return { rows: r.rows, rowCount: r.rows.length }; },
+      query: async (sql, params) => {
+        const r = await db.query<any>(sql, params as any[]);
+        return { rows: r.rows, rowCount: r.rows.length };
+      },
       exec: async (sql) => void (await db.exec(sql)),
-      tx: (fn) => db.transaction((t) => fn({ query: async (sql, params) => { const r = await t.query<any>(sql, params as any[]); return { rows: r.rows, rowCount: r.rows.length }; }, exec: async (sql) => void (await t.exec(sql)) })),
+      tx: (fn) =>
+        db.transaction((t) =>
+          fn({
+            query: async (sql, params) => {
+              const r = await t.query<any>(sql, params as any[]);
+              return { rows: r.rows, rowCount: r.rows.length };
+            },
+            exec: async (sql) => void (await t.exec(sql)),
+          }),
+        ),
     },
     fechar: () => db.close(),
   };
@@ -40,7 +57,9 @@ export async function bancoComUsuarios() {
   const banco = await bancoDeTeste();
   await banco.motor.exec(ESTRUTURA);
   const hash = await gerarHashSenha("Senha123");
-  const { rows } = await banco.query<{ id: string }>("INSERT INTO perfis (nome, permissoes) VALUES ('Equipe', '{mod.ver}') RETURNING id");
+  const { rows } = await banco.query<{ id: string }>(
+    "INSERT INTO perfis (nome, permissoes) VALUES ('Equipe', '{mod.ver}') RETURNING id",
+  );
   await banco.query(
     `INSERT INTO usuarios (nome, email, administrador, perfil_id, senha_hash, ativo) VALUES
       ('Ana', 'ana@x.com', true, $1, $2, true), ('Beto', 'beto@x.com', false, $1, $2, true), ('Caio', 'caio@x.com', false, $1, $2, false)`,

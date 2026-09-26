@@ -31,7 +31,10 @@ export function configuracaoEslint(o: OpcoesEslint = {}) {
         // o código usa "any" de propósito nas bordas (drivers de banco, erros de terceiros)
         "@typescript-eslint/no-explicit-any": "off",
         // "_" na frente marca parâmetro ou variável ignorada de propósito
-        "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none", ignoreRestSiblings: true }],
+        "@typescript-eslint/no-unused-vars": [
+          "error",
+          { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none", ignoreRestSiblings: true },
+        ],
         "no-empty": ["error", { allowEmptyCatch: true }],
         eqeqeq: ["error", "smart"],
         "prefer-const": "error",

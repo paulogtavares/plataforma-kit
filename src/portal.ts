@@ -46,7 +46,9 @@ function deBase64url(texto: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 const chave = (segredo: string, uso: KeyUsage) =>
-  globalThis.crypto.subtle.importKey("raw", codificador.encode(segredo), { name: "HMAC", hash: "SHA-256" }, false, [uso]);
+  globalThis.crypto.subtle.importKey("raw", codificador.encode(segredo), { name: "HMAC", hash: "SHA-256" }, false, [
+    uso,
+  ]);
 
 export function validarSegredo(segredo: string | undefined): string {
   if (!segredo || segredo.length < 32) throw new Error("PORTAL_SEGREDO precisa ter pelo menos 32 caracteres.");
@@ -57,12 +59,20 @@ export function validarSegredo(segredo: string | undefined): string {
 export async function assinarTokenPortal(declaracoes: DeclaracoesPortal, segredo: string) {
   const cabecalho = base64url(codificador.encode(JSON.stringify({ alg: "HS256", typ: "JWT" })));
   const corpo = base64url(codificador.encode(JSON.stringify(declaracoes)));
-  const assinatura = await globalThis.crypto.subtle.sign("HMAC", await chave(segredo, "sign"), codificador.encode(`${cabecalho}.${corpo}`));
+  const assinatura = await globalThis.crypto.subtle.sign(
+    "HMAC",
+    await chave(segredo, "sign"),
+    codificador.encode(`${cabecalho}.${corpo}`),
+  );
   return `${cabecalho}.${corpo}.${base64url(new Uint8Array(assinatura))}`;
 }
 
 /** Confere assinatura, algoritmo, validade e emissor. Lança ErroApi 401 com motivo genérico para a tela. */
-export async function verificarTokenPortal(token: string, o: OpcoesPortal, agora = Date.now()): Promise<DeclaracoesPortal> {
+export async function verificarTokenPortal(
+  token: string,
+  o: OpcoesPortal,
+  agora = Date.now(),
+): Promise<DeclaracoesPortal> {
   const recusar = (motivo: string): never => {
     const e = new ErroApi(401, "Acesso pelo portal inválido ou expirado. Entre novamente pelo portal.");
     (e as any).motivo = motivo; // para o log; não vai para a tela
@@ -82,7 +92,12 @@ export async function verificarTokenPortal(token: string, o: OpcoesPortal, agora
     return recusar("codificação");
   }
   if (cabecalho?.alg !== "HS256") recusar(`algoritmo ${cabecalho?.alg}`); // recusa "none" e qualquer outro
-  const valida = await globalThis.crypto.subtle.verify("HMAC", await chave(o.segredo, "verify"), assinatura!, codificador.encode(`${c}.${d}`));
+  const valida = await globalThis.crypto.subtle.verify(
+    "HMAC",
+    await chave(o.segredo, "verify"),
+    assinatura!,
+    codificador.encode(`${c}.${d}`),
+  );
   if (!valida) recusar("assinatura");
   const folga = o.folgaSegundos ?? 60;
   const segundos = Math.floor(agora / 1000);

@@ -7,8 +7,14 @@ import { z } from "zod";
 import { ErroApi } from "./erros.js";
 import { hashToken, lerCookie, type Sessao } from "./sessao.js";
 import {
-  conferirSenha, gerarHashSenha, gerarToken, hashParaComparacaoFalsa, limparErros,
-  minutosBloqueado, registrarErro, validarForcaSenha,
+  conferirSenha,
+  gerarHashSenha,
+  gerarToken,
+  hashParaComparacaoFalsa,
+  limparErros,
+  minutosBloqueado,
+  registrarErro,
+  validarForcaSenha,
 } from "./seguranca.js";
 import type { BancoComTransacao } from "./tipos.js";
 
@@ -59,7 +65,10 @@ export async function rotasAutenticacao(app: FastifyInstance, o: OpcoesAutentica
     const chaves = [`email:${b.email}`];
     const bloqueio = minutosBloqueado(chaves);
     if (bloqueio) {
-      throw new ErroApi(429, `Muitas tentativas erradas. Tente de novo em ${bloqueio} minuto${bloqueio > 1 ? "s" : ""}.`);
+      throw new ErroApi(
+        429,
+        `Muitas tentativas erradas. Tente de novo em ${bloqueio} minuto${bloqueio > 1 ? "s" : ""}.`,
+      );
     }
 
     const { rows } = await banco.query<{ id: string; senha_hash: string | null }>(
@@ -97,7 +106,9 @@ export async function rotasAutenticacao(app: FastifyInstance, o: OpcoesAutentica
   });
 
   /** Quem está logado. Responde mesmo com troca de senha pendente (a tela precisa saber). */
-  app.get("/api/eu", { config: { publica: true } }, async (req) => sessao.autenticar(req, { permitirTrocaPendente: true }));
+  app.get("/api/eu", { config: { publica: true } }, async (req) =>
+    sessao.autenticar(req, { permitirTrocaPendente: true }),
+  );
 
   app.post("/api/auth/trocar-senha", { config: { publica: true } }, async (req) => {
     if (sessao.modo === "portal") throw new ErroApi(400, SO_PORTAL);
@@ -109,8 +120,11 @@ export async function rotasAutenticacao(app: FastifyInstance, o: OpcoesAutentica
     if (fraca) throw new ErroApi(400, fraca);
     if (b.nova_senha === b.senha_atual) throw new ErroApi(400, "A nova senha precisa ser diferente da atual.");
 
-    const { rows } = await banco.query<{ senha_hash: string }>("SELECT senha_hash FROM usuarios WHERE id = $1", [usuario.id]);
-    if (!(await conferirSenha(b.senha_atual, rows[0]?.senha_hash))) throw new ErroApi(400, "A senha atual está incorreta.");
+    const { rows } = await banco.query<{ senha_hash: string }>("SELECT senha_hash FROM usuarios WHERE id = $1", [
+      usuario.id,
+    ]);
+    if (!(await conferirSenha(b.senha_atual, rows[0]?.senha_hash)))
+      throw new ErroApi(400, "A senha atual está incorreta.");
 
     const tokenAtual = lerCookie(req, sessao.nomeCookie);
     const hashAtual = tokenAtual ? await hashToken(tokenAtual) : "";

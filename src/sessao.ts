@@ -55,14 +55,17 @@ export function criarSessao<P extends string>(o: OpcoesSessao<P>) {
   type Usuario = UsuarioPlataforma<P>;
   const modo: ModoAutenticacao = o.modo ?? "local";
   const nomeCookie = o.nomeCookie ?? "sessao";
-  if (modo === "portal" && !o.portal?.segredo) throw new Error("AUTH_MODO=portal exige o segredo do portal (PORTAL_SEGREDO).");
+  if (modo === "portal" && !o.portal?.segredo)
+    throw new Error("AUTH_MODO=portal exige o segredo do portal (PORTAL_SEGREDO).");
   const cabecalhoPortal = (o.portal?.cabecalho ?? "x-portal-token").toLowerCase();
 
   /** administrador: todas as permissões do módulo, independentemente do perfil */
   const completar = (u: Usuario): Usuario => (u.administrador ? { ...u, permissoes: [...o.todasPermissoes] } : u);
 
   async function carregarUsuario(id: string) {
-    const { rows } = await o.banco.query<Usuario>(`SELECT ${CAMPOS} FROM usuarios u ${JUNTAR_PERFIL} WHERE u.id = $1`, [id]);
+    const { rows } = await o.banco.query<Usuario>(`SELECT ${CAMPOS} FROM usuarios u ${JUNTAR_PERFIL} WHERE u.id = $1`, [
+      id,
+    ]);
     return rows[0] ? completar(rows[0]) : null;
   }
 
@@ -99,9 +102,11 @@ export function criarSessao<P extends string>(o: OpcoesSessao<P>) {
     const u = rows[0];
     if (!u) throw new ErroApi(401, "Sua sessão expirou. Faça login novamente.");
     // sessão "deslizante": quem usa o sistema não precisa logar de novo toda semana
-    if (u.renovar) await o.banco.query("UPDATE sessoes SET expira_em = now() + interval '7 days' WHERE token_hash = $1", [hash]);
+    if (u.renovar)
+      await o.banco.query("UPDATE sessoes SET expira_em = now() + interval '7 days' WHERE token_hash = $1", [hash]);
     const { renovar: _r, ...usuario } = u;
-    if (usuario.precisa_trocar_senha && !permitirTrocaPendente) throw new ErroApi(403, "Troque a senha provisória para continuar.");
+    if (usuario.precisa_trocar_senha && !permitirTrocaPendente)
+      throw new ErroApi(403, "Troque a senha provisória para continuar.");
     return completar(usuario as Usuario);
   }
 

@@ -14,35 +14,56 @@ describe("token do portal", () => {
   });
   it("recusa expirado (com folga de 60 s) e emitido no futuro", async () => {
     const velho = await assinarTokenPortal({ email: "a@b.c", exp: s - 61 }, SEGREDO);
-    await expect(verificarTokenPortal(velho, { segredo: SEGREDO }, agora)).rejects.toMatchObject({ status: 401, motivo: "expirado" });
+    await expect(verificarTokenPortal(velho, { segredo: SEGREDO }, agora)).rejects.toMatchObject({
+      status: 401,
+      motivo: "expirado",
+    });
     const dentroDaFolga = await assinarTokenPortal({ email: "a@b.c", exp: s - 30 }, SEGREDO);
     await expect(verificarTokenPortal(dentroDaFolga, { segredo: SEGREDO }, agora)).resolves.toBeTruthy();
     const futuro = await assinarTokenPortal({ email: "a@b.c", exp: s + 900, iat: s + 600 }, SEGREDO);
-    await expect(verificarTokenPortal(futuro, { segredo: SEGREDO }, agora)).rejects.toMatchObject({ motivo: "emitido no futuro" });
+    await expect(verificarTokenPortal(futuro, { segredo: SEGREDO }, agora)).rejects.toMatchObject({
+      motivo: "emitido no futuro",
+    });
   });
   it("recusa assinatura errada, segredo errado e conteúdo alterado", async () => {
     const t = await assinarTokenPortal({ email: "a@b.c", exp: s + 300 }, SEGREDO);
-    await expect(verificarTokenPortal(t, { segredo: SEGREDO + "x" }, agora)).rejects.toMatchObject({ motivo: "assinatura" });
+    await expect(verificarTokenPortal(t, { segredo: SEGREDO + "x" }, agora)).rejects.toMatchObject({
+      motivo: "assinatura",
+    });
     const [c, , a] = t.split(".");
     const alterado = `${c}.${b64({ email: "admin@b.c", exp: s + 300 })}.${a}`;
-    await expect(verificarTokenPortal(alterado, { segredo: SEGREDO }, agora)).rejects.toMatchObject({ motivo: "assinatura" });
+    await expect(verificarTokenPortal(alterado, { segredo: SEGREDO }, agora)).rejects.toMatchObject({
+      motivo: "assinatura",
+    });
   });
   it('recusa alg "none" e outros algoritmos', async () => {
     const semAssinatura = `${b64({ alg: "none", typ: "JWT" })}.${b64({ email: "a@b.c", exp: s + 300 })}.`;
-    await expect(verificarTokenPortal(semAssinatura, { segredo: SEGREDO }, agora)).rejects.toMatchObject({ motivo: "algoritmo none" });
+    await expect(verificarTokenPortal(semAssinatura, { segredo: SEGREDO }, agora)).rejects.toMatchObject({
+      motivo: "algoritmo none",
+    });
     const rs = `${b64({ alg: "RS256" })}.${b64({ email: "a@b.c", exp: s + 300 })}.xx`;
-    await expect(verificarTokenPortal(rs, { segredo: SEGREDO }, agora)).rejects.toMatchObject({ motivo: "algoritmo RS256" });
+    await expect(verificarTokenPortal(rs, { segredo: SEGREDO }, agora)).rejects.toMatchObject({
+      motivo: "algoritmo RS256",
+    });
   });
   it("recusa emissor diferente, sem e-mail e formato inválido", async () => {
     const t = await assinarTokenPortal({ email: "a@b.c", exp: s + 300, iss: "outro" }, SEGREDO);
-    await expect(verificarTokenPortal(t, { segredo: SEGREDO, emissor: "portal" }, agora)).rejects.toMatchObject({ motivo: "emissor" });
+    await expect(verificarTokenPortal(t, { segredo: SEGREDO, emissor: "portal" }, agora)).rejects.toMatchObject({
+      motivo: "emissor",
+    });
     const semEmail = await assinarTokenPortal({ email: "", exp: s + 300 }, SEGREDO);
-    await expect(verificarTokenPortal(semEmail, { segredo: SEGREDO }, agora)).rejects.toMatchObject({ motivo: "sem e-mail" });
+    await expect(verificarTokenPortal(semEmail, { segredo: SEGREDO }, agora)).rejects.toMatchObject({
+      motivo: "sem e-mail",
+    });
     await expect(verificarTokenPortal("abc", { segredo: SEGREDO }, agora)).rejects.toMatchObject({ motivo: "formato" });
-    await expect(verificarTokenPortal("a.b!.c", { segredo: SEGREDO }, agora)).rejects.toMatchObject({ motivo: "codificação" });
+    await expect(verificarTokenPortal("a.b!.c", { segredo: SEGREDO }, agora)).rejects.toMatchObject({
+      motivo: "codificação",
+    });
   });
   it("a mensagem para a tela não revela o motivo", async () => {
-    await expect(verificarTokenPortal("abc", { segredo: SEGREDO }, agora)).rejects.toThrow("Acesso pelo portal inválido ou expirado. Entre novamente pelo portal.");
+    await expect(verificarTokenPortal("abc", { segredo: SEGREDO }, agora)).rejects.toThrow(
+      "Acesso pelo portal inválido ou expirado. Entre novamente pelo portal.",
+    );
   });
   it("exige segredo com 32+ caracteres", () => {
     expect(() => validarSegredo("curto")).toThrow(/32 caracteres/);

@@ -42,7 +42,8 @@ export interface ItemCatalogo<C extends string = string> {
 export function criarCatalogo<const L extends readonly ItemCatalogo[]>(modulo: string, lista: L) {
   const vistas = new Set<string>();
   for (const p of lista) {
-    if (!chaveDoModulo(modulo, p.chave)) throw new Error(`Permissão "${p.chave}" fora da regra do kit: use "${modulo}.<recurso>[.<ação>]".`);
+    if (!chaveDoModulo(modulo, p.chave))
+      throw new Error(`Permissão "${p.chave}" fora da regra do kit: use "${modulo}.<recurso>[.<ação>]".`);
     if (vistas.has(p.chave)) throw new Error(`Permissão "${p.chave}" repetida no catálogo.`);
     vistas.add(p.chave);
   }

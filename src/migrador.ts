@@ -33,7 +33,9 @@ export interface OpcoesMigracao {
 
 export async function migrar(motor: MotorMigracao, o: OpcoesMigracao) {
   const aplicados: string[] = [];
-  const r = await motor.query<{ existe: string | null }>("SELECT to_regclass($1)::text AS existe", [o.tabelaReferencia]);
+  const r = await motor.query<{ existe: string | null }>("SELECT to_regclass($1)::text AS existe", [
+    o.tabelaReferencia,
+  ]);
   if (!r.rows[0]?.existe) {
     for (const s of [...o.base, ...(o.teste ?? [])]) {
       o.log(`Aplicando ${s.nome}…`);
@@ -42,7 +44,9 @@ export async function migrar(motor: MotorMigracao, o: OpcoesMigracao) {
     }
   }
 
-  await motor.exec("CREATE TABLE IF NOT EXISTS migracoes (nome text PRIMARY KEY, aplicada_em timestamptz NOT NULL DEFAULT now())");
+  await motor.exec(
+    "CREATE TABLE IF NOT EXISTS migracoes (nome text PRIMARY KEY, aplicada_em timestamptz NOT NULL DEFAULT now())",
+  );
   const feitas = new Set((await motor.query<{ nome: string }>("SELECT nome FROM migracoes")).rows.map((x) => x.nome));
   for (const mg of o.migracoes) {
     if (feitas.has(mg.nome)) continue;

@@ -21,14 +21,22 @@ describe("migrador", () => {
   it("banco existente: só as migrações novas", async () => {
     const b = await bancoDeTeste();
     await migrar(b.motor, { tabelaReferencia: "public.coisas", base, migracoes: migracoes.slice(0, 1), log: () => {} });
-    expect(await migrar(b.motor, { tabelaReferencia: "public.coisas", base, migracoes, log: () => {} })).toEqual(["m/06.sql"]);
+    expect(await migrar(b.motor, { tabelaReferencia: "public.coisas", base, migracoes, log: () => {} })).toEqual([
+      "m/06.sql",
+    ]);
     await b.fechar();
   });
   it("migração com erro é desfeita por inteiro e não fica registrada", async () => {
     const b = await bancoDeTeste();
-    const ruim = [{ nome: "m/07.sql", sql: "ALTER TABLE coisas ADD COLUMN x int; SELECT * FROM tabela_que_nao_existe;" }];
-    await expect(migrar(b.motor, { tabelaReferencia: "public.coisas", base, migracoes: ruim, log: () => {} })).rejects.toThrow();
-    const colunas = await b.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'coisas' ORDER BY 1");
+    const ruim = [
+      { nome: "m/07.sql", sql: "ALTER TABLE coisas ADD COLUMN x int; SELECT * FROM tabela_que_nao_existe;" },
+    ];
+    await expect(
+      migrar(b.motor, { tabelaReferencia: "public.coisas", base, migracoes: ruim, log: () => {} }),
+    ).rejects.toThrow();
+    const colunas = await b.query(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'coisas' ORDER BY 1",
+    );
     expect(colunas.rows.map((c: any) => c.column_name)).toEqual(["id", "nome"]);
     expect((await b.query("SELECT count(*)::int AS n FROM migracoes")).rows[0].n).toBe(0);
     await b.fechar();
