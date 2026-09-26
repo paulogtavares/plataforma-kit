@@ -1,0 +1,62 @@
+{
+  "name": "@plataforma/kit",
+  "version": "1.0.0",
+  "description": "Base comum dos módulos da plataforma: login (local ou pelo portal), sessão, permissões, erros e migrações",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "exports": {
+    "./erros": {
+      "types": "./dist/erros.d.ts",
+      "default": "./dist/erros.js"
+    },
+    "./permissoes": {
+      "types": "./dist/permissoes.d.ts",
+      "default": "./dist/permissoes.js"
+    },
+    "./sessao": {
+      "types": "./dist/sessao.d.ts",
+      "default": "./dist/sessao.js"
+    },
+    "./portal": {
+      "types": "./dist/portal.d.ts",
+      "default": "./dist/portal.js"
+    },
+    "./seguranca": {
+      "types": "./dist/seguranca.d.ts",
+      "default": "./dist/seguranca.js"
+    },
+    "./autenticacao": {
+      "types": "./dist/autenticacao.d.ts",
+      "default": "./dist/autenticacao.js"
+    },
+    "./migrador": {
+      "types": "./dist/migrador.d.ts",
+      "default": "./dist/migrador.js"
+    },
+    "./tipos": {
+      "types": "./dist/tipos.d.ts",
+      "default": "./dist/tipos.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.testes.json",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "fastify": "^5.0.0",
+    "zod": "^3.25.0"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8"
+  }
+}
