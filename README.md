@@ -19,6 +19,8 @@ coisa do modo navegador de cada módulo, nunca do servidor.
 | `@plataforma/kit/autenticacao` | não | rotas Fastify `/api/auth/entrar`, `/api/auth/sair`, `/api/eu`, `/api/auth/trocar-senha` |
 | `@plataforma/kit/migrador` | não | `migrar`: estrutura inicial num banco novo e migrações registradas |
 | `@plataforma/kit/tipos` | sim | `Banco`, `BancoComTransacao`, `UsuarioPlataforma` |
+| `@plataforma/kit/eslint` | — (ferramenta) | `configuracaoEslint({ react, ignorar })`: configuração comum do ESLint 9 |
+| `@plataforma/kit/prettier` | — (ferramenta) | configuração comum do Prettier 3 (120 colunas, aspas duplas, vírgula final) |
 
 ## Uso num módulo
 
@@ -81,6 +83,21 @@ Recusa `alg` diferente de `HS256` (inclusive `none`), assinatura inválida, toke
 relógio) e usuário inativo ou não cadastrado. A tela recebe uma mensagem genérica; o motivo técnico vai para o log.
 
 > Formato proposto pelo kit v1. Enquanto o portal não estiver pronto, os módulos rodam em `AUTH_MODO=local`.
+
+## Lint e formatação
+
+```js
+// eslint.config.js
+import { configuracaoEslint } from "@plataforma/kit/eslint";
+export default configuracaoEslint({ react: ["web/src/**/*.tsx"], ignorar: ["dist-pacote/**"] });
+
+// prettier.config.js
+export { default } from "@plataforma/kit/prettier";
+```
+
+O ESLint foca em erros reais (hooks do React, variáveis não usadas, `==`), sem regras de estilo;
+a formatação é do Prettier. Instale no módulo: `eslint @eslint/js typescript-eslint eslint-plugin-react-hooks
+eslint-config-prettier globals prettier`.
 
 ## Desenvolvimento
 

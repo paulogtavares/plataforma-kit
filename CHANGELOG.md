@@ -1,5 +1,10 @@
 # @plataforma/kit — histórico
 
+## 1.1.0 · 2026-09-26
+
+- Configuração comum de lint e formatação: `@plataforma/kit/eslint` (`configuracaoEslint`) e
+  `@plataforma/kit/prettier`. As ferramentas são dependências opcionais (`peerDependencies`).
+
 ## 1.0.0 · 2026-09-26
 
 Primeira versão, extraída do Cronogramas (v2.0.0).
