@@ -22,6 +22,8 @@ export interface UsuarioTela {
 }
 
 export interface Sessao<U extends UsuarioTela = UsuarioTela> {
+  /** cliente de API do módulo (mesmo prefixo e cookie) */
+  cliente: ClienteApi;
   usuario: U | null;
   /** true enquanto ainda não se sabe se há sessão aberta */
   carregando: boolean;
@@ -115,6 +117,7 @@ export function ProvedorSessao<U extends UsuarioTela = UsuarioTela>({
   const atual = fixo ? fixo.usuario : usuario;
   const valor = useMemo<Sessao<U>>(
     () => ({
+      cliente,
       usuario: atual,
       carregando: fixo ? fixo.carregando : carregando,
       entrar,
@@ -123,7 +126,7 @@ export function ProvedorSessao<U extends UsuarioTela = UsuarioTela>({
       trocarSenha,
       pode: (chave: string) => podeKit(atual, chave),
     }),
-    [atual, fixo, carregando, entrar, sair, recarregar, trocarSenha],
+    [cliente, atual, fixo, carregando, entrar, sair, recarregar, trocarSenha],
   );
   return <SessaoCtx.Provider value={valor}>{children}</SessaoCtx.Provider>;
 }
