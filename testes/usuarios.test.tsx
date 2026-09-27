@@ -2,7 +2,13 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ProvedorAvisos, ProvedorSessao, TelaUsuarios, type ExtensaoUsuario, type UsuarioTela } from "../src/react/index.js";
+import {
+  ProvedorAvisos,
+  ProvedorSessao,
+  TelaUsuarios,
+  type ExtensaoUsuario,
+  type UsuarioTela,
+} from "../src/react/index.js";
 import { ErroRequisicao } from "../src/web.js";
 
 afterEach(cleanup);
@@ -12,8 +18,38 @@ const PERFIS = [
   { id: "p2", nome: "Cliente", descricao: null, permissoes: [], qtd_usuarios: 1 },
 ];
 const USUARIOS = [
-  { id: "u1", nome: "Ana Souza", email: "ana@x.com", tipo: "interno", cliente_id: null, ativo: true, administrador: true, precisa_trocar_senha: false, ultimo_acesso: null, criado_em: "", tem_senha: true, perfil_id: "p1", perfil_nome: "Equipe", cliente_nome: null },
-  { id: "u2", nome: "Carla", email: "carla@lume.com", tipo: "externo", cliente_id: "c1", ativo: true, administrador: false, precisa_trocar_senha: true, ultimo_acesso: null, criado_em: "", tem_senha: true, perfil_id: "p2", perfil_nome: "Cliente", cliente_nome: "Lume" },
+  {
+    id: "u1",
+    nome: "Ana Souza",
+    email: "ana@x.com",
+    tipo: "interno",
+    cliente_id: null,
+    ativo: true,
+    administrador: true,
+    precisa_trocar_senha: false,
+    ultimo_acesso: null,
+    criado_em: "",
+    tem_senha: true,
+    perfil_id: "p1",
+    perfil_nome: "Equipe",
+    cliente_nome: null,
+  },
+  {
+    id: "u2",
+    nome: "Carla",
+    email: "carla@lume.com",
+    tipo: "externo",
+    cliente_id: "c1",
+    ativo: true,
+    administrador: false,
+    precisa_trocar_senha: true,
+    ultimo_acesso: null,
+    criado_em: "",
+    tem_senha: true,
+    perfil_id: "p2",
+    perfil_nome: "Cliente",
+    cliente_nome: "Lume",
+  },
 ];
 const CATALOGO = [
   { chave: "mod.ver", grupo: "Geral", nome: "Ver tudo", descricao: "d1" },
@@ -21,16 +57,24 @@ const CATALOGO = [
 ];
 
 function montar(props: Partial<React.ComponentProps<typeof TelaUsuarios>> = {}, usuario: UsuarioTela = ADMIN) {
-  const chamar = vi.fn(async (metodo: string, url: string, corpo?: any): Promise<any> => {
+  const chamar = vi.fn(async (metodo: string, url: string, _corpo?: any): Promise<any> => {
     const k = `${metodo} ${url}`;
     if (k === "GET /admin/usuarios") return USUARIOS;
     if (k === "GET /admin/perfis") return PERFIS;
     if (k === "GET /admin/permissoes") return CATALOGO;
     if (k === "POST /admin/usuarios") return { id: "u9", senha_provisoria: "Prov-1234" };
-    if (metodo === "PATCH" || metodo === "PUT" || metodo === "DELETE" || url.endsWith("/redefinir-senha")) return { ok: true, senha_provisoria: "Nova-5678" };
+    if (metodo === "PATCH" || metodo === "PUT" || metodo === "DELETE" || url.endsWith("/redefinir-senha"))
+      return { ok: true, senha_provisoria: "Nova-5678" };
     throw new ErroRequisicao(404, k);
   });
-  const cliente: any = { requisitar: chamar, get: (u: string) => chamar("GET", u), post: (u: string, c?: any) => chamar("POST", u, c ?? {}), put: (u: string, c?: any) => chamar("PUT", u, c ?? {}), patch: (u: string, c?: any) => chamar("PATCH", u, c ?? {}), delete: (u: string) => chamar("DELETE", u) };
+  const cliente: any = {
+    requisitar: chamar,
+    get: (u: string) => chamar("GET", u),
+    post: (u: string, c?: any) => chamar("POST", u, c ?? {}),
+    put: (u: string, c?: any) => chamar("PUT", u, c ?? {}),
+    patch: (u: string, c?: any) => chamar("PATCH", u, c ?? {}),
+    delete: (u: string) => chamar("DELETE", u),
+  };
   render(
     <MemoryRouter initialEntries={["/usuarios"]}>
       <ProvedorAvisos>
@@ -66,7 +110,10 @@ describe("TelaUsuarios", () => {
   });
 
   it("busca pelo texto do módulo", async () => {
-    montar({ placeholderBusca: "Buscar por nome, e-mail ou cliente", textoBusca: (u) => `${u.nome} ${u.cliente_nome ?? ""}` });
+    montar({
+      placeholderBusca: "Buscar por nome, e-mail ou cliente",
+      textoBusca: (u) => `${u.nome} ${u.cliente_nome ?? ""}`,
+    });
     await screen.findByText("Carla");
     fireEvent.change(screen.getByPlaceholderText("Buscar por nome, e-mail ou cliente"), { target: { value: "lume" } });
     expect(screen.queryByText("Ana Souza (você)")).toBeNull();
@@ -86,7 +133,11 @@ describe("TelaUsuarios", () => {
       dados: (v, externo) => ({ cliente_id: externo ? v.extra : null }),
       depoisDeSalvar: depois,
     };
-    const chamar = montar({ extensao, nomePlataforma: "plataforma de orçamentos", textoAdministrador: "Admin do módulo" });
+    const chamar = montar({
+      extensao,
+      nomePlataforma: "plataforma de orçamentos",
+      textoAdministrador: "Admin do módulo",
+    });
     await screen.findByText("Carla");
     fireEvent.click(screen.getByRole("button", { name: /Novo usuário/ }));
     const dialogo = screen.getByRole("dialog", { name: "Novo usuário" });
@@ -99,34 +150,55 @@ describe("TelaUsuarios", () => {
     expect(within(dialogo).queryByText("Admin do módulo")).toBeNull(); // perfil externo não pode ser administrador
     expect(within(dialogo).getByText("campos extras externo")).toBeTruthy();
     await act(async () => fireEvent.submit(within(dialogo).getByLabelText("Nome").closest("form")!));
-    expect(chamar).toHaveBeenCalledWith("POST", "/admin/usuarios", { nome: "Dora Lima", email: "dora@x.com", perfil_id: "p2", cliente_id: "x1", administrador: false });
+    expect(chamar).toHaveBeenCalledWith("POST", "/admin/usuarios", {
+      nome: "Dora Lima",
+      email: "dora@x.com",
+      perfil_id: "p2",
+      cliente_id: "x1",
+      administrador: false,
+    });
     expect(depois).toHaveBeenCalledWith("u9", { extra: "x1" }, null);
     const senha = screen.getByRole("dialog", { name: "Senha provisória gerada" });
     expect(within(senha).getByText("Prov-1234")).toBeTruthy();
-    expect((within(senha).getByRole("textbox") as HTMLTextAreaElement).value).toMatch(/^Olá, Dora! Seu acesso à plataforma de orçamentos:/);
+    expect((within(senha).getByRole("textbox") as HTMLTextAreaElement).value).toMatch(
+      /^Olá, Dora! Seu acesso à plataforma de orçamentos:/,
+    );
   });
 
   it("editar o próprio usuário não envia administrador nem dados extras", async () => {
-    const chamar = montar({ extensao: { inicial: () => ({}), Campos: () => null, dados: () => ({ cliente_id: null }) } });
+    const chamar = montar({
+      extensao: { inicial: () => ({}), Campos: () => null, dados: () => ({ cliente_id: null }) },
+    });
     const ana = (await screen.findByText("Ana Souza (você)")).closest(".linha-usuario") as HTMLElement;
     fireEvent.click(within(ana).getByRole("button", { name: "Editar" }));
     const dialogo = screen.getByRole("dialog", { name: "Editar Ana Souza" });
     expect((within(dialogo).getByRole("checkbox") as HTMLInputElement).disabled).toBe(true);
     await act(async () => fireEvent.submit(within(dialogo).getByLabelText("Nome").closest("form")!));
-    expect(chamar).toHaveBeenCalledWith("PATCH", "/admin/usuarios/u1", { nome: "Ana Souza", email: "ana@x.com", perfil_id: "p1" });
+    expect(chamar).toHaveBeenCalledWith("PATCH", "/admin/usuarios/u1", {
+      nome: "Ana Souza",
+      email: "ana@x.com",
+      perfil_id: "p1",
+    });
   });
 
   it("desativar pede confirmação e usa a rota do kit", async () => {
     const chamar = montar();
     const carla = (await screen.findByText("Carla")).closest(".linha-usuario") as HTMLElement;
     fireEvent.click(within(carla).getByRole("button", { name: "Desativar" }));
-    await act(async () => fireEvent.click(within(screen.getByRole("dialog", { name: "Desativar Carla?" })).getByRole("button", { name: "Desativar" })));
+    await act(async () =>
+      fireEvent.click(
+        within(screen.getByRole("dialog", { name: "Desativar Carla?" })).getByRole("button", { name: "Desativar" }),
+      ),
+    );
     expect(chamar).toHaveBeenCalledWith("PATCH", "/admin/usuarios/u2", { ativo: false });
     await waitFor(() => expect(screen.getByText("Usuário desativado.")).toBeTruthy());
   });
 
   it("perfis: nomes do catálogo, texto do perfil vazio e aviso sem a permissão interna", async () => {
-    const chamar = montar({ textoPerfilVazio: "Só vê o que for liberado", avisoSemInterna: <>Sem a permissão interna, visão externa.</> });
+    const chamar = montar({
+      textoPerfilVazio: "Só vê o que for liberado",
+      avisoSemInterna: <>Sem a permissão interna, visão externa.</>,
+    });
     await screen.findByText("Carla");
     fireEvent.click(screen.getByRole("tab", { name: "Perfis de acesso" }));
     expect(await screen.findByText("Ver itens internos")).toBeTruthy();
@@ -141,6 +213,10 @@ describe("TelaUsuarios", () => {
     fireEvent.change(within(dialogo).getByLabelText("Nome do perfil"), { target: { value: "Diretoria" } });
     fireEvent.click(within(dialogo).getByLabelText(/Ver tudo/));
     await act(async () => fireEvent.submit(within(dialogo).getByLabelText("Nome do perfil").closest("form")!));
-    expect(chamar).toHaveBeenCalledWith("POST", "/admin/perfis", { nome: "Diretoria", descricao: null, permissoes: ["mod.ver"] });
+    expect(chamar).toHaveBeenCalledWith("POST", "/admin/perfis", {
+      nome: "Diretoria",
+      descricao: null,
+      permissoes: ["mod.ver"],
+    });
   });
 });

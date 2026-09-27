@@ -3,12 +3,28 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  Casca, Modal, ProvedorAvisos, ProvedorSessao, TelaLogin, TelaTrocaSenha, useAvisos, useSessao, type UsuarioTela,
+  Casca,
+  Modal,
+  ProvedorAvisos,
+  ProvedorSessao,
+  TelaLogin,
+  TelaTrocaSenha,
+  useAvisos,
+  useSessao,
+  type UsuarioTela,
 } from "../src/react/index.js";
 import { ErroRequisicao } from "../src/web.js";
 
 afterEach(cleanup);
-const ANA: UsuarioTela = { id: "1", nome: "Ana Souza", email: "ana@x.com", tipo: "interno", administrador: true, perfil_nome: "Projetos", permissoes: ["mod.ver"] };
+const ANA: UsuarioTela = {
+  id: "1",
+  nome: "Ana Souza",
+  email: "ana@x.com",
+  tipo: "interno",
+  administrador: true,
+  perfil_nome: "Projetos",
+  permissoes: ["mod.ver"],
+};
 
 /** Cliente de API falso: respostas por "MÉTODO caminho". */
 function clienteFalso(respostas: Record<string, (corpo?: any) => any>) {
@@ -30,13 +46,26 @@ function clienteFalso(respostas: Record<string, (corpo?: any) => any>) {
   };
 }
 const Local = () => <span data-testid="local">{useLocation().pathname}</span>;
-function montar(ui: React.ReactNode, cliente: any, extra: Partial<React.ComponentProps<typeof ProvedorSessao>> = {}, inicial = "/tela") {
+function montar(
+  ui: React.ReactNode,
+  cliente: any,
+  extra: Partial<React.ComponentProps<typeof ProvedorSessao>> = {},
+  inicial = "/tela",
+) {
   return render(
     <MemoryRouter initialEntries={[inicial]}>
       <ProvedorAvisos>
         <ProvedorSessao cliente={cliente} {...extra}>
           <Routes>
-            <Route path="*" element={<>{ui}<Local /></>} />
+            <Route
+              path="*"
+              element={
+                <>
+                  {ui}
+                  <Local />
+                </>
+              }
+            />
           </Routes>
         </ProvedorSessao>
       </ProvedorAvisos>
@@ -45,24 +74,48 @@ function montar(ui: React.ReactNode, cliente: any, extra: Partial<React.Componen
 }
 const Quem = () => {
   const s = useSessao();
-  return <p data-testid="quem">{s.carregando ? "carregando" : (s.usuario?.nome ?? "ninguém")} {String(s.pode("mod.ver"))}</p>;
+  return (
+    <p data-testid="quem">
+      {s.carregando ? "carregando" : (s.usuario?.nome ?? "ninguém")} {String(s.pode("mod.ver"))}
+    </p>
+  );
 };
 
 describe("ProvedorSessao", () => {
   it("carrega /eu; 401 vira 'ninguém'", async () => {
-    const f = clienteFalso({ "GET /eu": () => { throw new ErroRequisicao(401, "x"); } });
+    const f = clienteFalso({
+      "GET /eu": () => {
+        throw new ErroRequisicao(401, "x");
+      },
+    });
     montar(<Quem />, f.cliente);
     expect(screen.getByTestId("quem").textContent).toBe("carregando false");
     await waitFor(() => expect(screen.getByTestId("quem").textContent).toBe("ninguém false"));
   });
   it("entrar grava o usuário, avisa o módulo e vai para o início; sair faz o inverso", async () => {
     const aoMudar = vi.fn();
-    const f = clienteFalso({ "GET /eu": () => null, "POST /auth/entrar": () => ANA, "POST /auth/sair": () => ({ ok: true }) });
+    const f = clienteFalso({
+      "GET /eu": () => null,
+      "POST /auth/entrar": () => ANA,
+      "POST /auth/sair": () => ({ ok: true }),
+    });
     const Botoes = () => {
       const s = useSessao();
-      return (<><button onClick={() => s.entrar("ana@x.com", "s")}>entrar</button><button onClick={() => s.sair()}>sair</button></>);
+      return (
+        <>
+          <button onClick={() => s.entrar("ana@x.com", "s")}>entrar</button>
+          <button onClick={() => s.sair()}>sair</button>
+        </>
+      );
     };
-    montar(<><Quem /><Botoes /></>, f.cliente, { aoMudarUsuario: aoMudar });
+    montar(
+      <>
+        <Quem />
+        <Botoes />
+      </>,
+      f.cliente,
+      { aoMudarUsuario: aoMudar },
+    );
     await waitFor(() => expect(screen.getByTestId("quem").textContent).toBe("ninguém false"));
     await act(async () => fireEvent.click(screen.getByText("entrar")));
     expect(screen.getByTestId("quem").textContent).toBe("Ana Souza true");
@@ -77,7 +130,9 @@ describe("ProvedorSessao", () => {
     const f = clienteFalso({ "GET /eu": () => ANA });
     montar(<Quem />, f.cliente, { aoMudarUsuario: aoMudar, eventoSessaoExpirada: "mod:expirou" });
     await waitFor(() => expect(screen.getByTestId("quem").textContent).toBe("Ana Souza true"));
-    act(() => { window.dispatchEvent(new Event("mod:expirou")); });
+    act(() => {
+      window.dispatchEvent(new Event("mod:expirou"));
+    });
     expect(screen.getByTestId("quem").textContent).toBe("ninguém false");
     expect(aoMudar).toHaveBeenCalledTimes(1);
   });
@@ -90,9 +145,18 @@ describe("ProvedorSessao", () => {
 });
 
 describe("TelaLogin", () => {
-  const status = { version: "2.0.0", buildDate: "2026-09-27", acesso_teste: { senha: "teste123", emails: [{ email: "bruno@x.com", perfil: "Projetos" }] } };
+  const status = {
+    version: "2.0.0",
+    buildDate: "2026-09-27",
+    acesso_teste: { senha: "teste123", emails: [{ email: "bruno@x.com", perfil: "Projetos" }] },
+  };
   it("mostra nome, versão e caixa de testes; clicar preenche; erro da API aparece", async () => {
-    const f = clienteFalso({ "GET /eu": () => null, "POST /auth/entrar": () => { throw new ErroRequisicao(401, "E-mail ou senha incorretos."); } });
+    const f = clienteFalso({
+      "GET /eu": () => null,
+      "POST /auth/entrar": () => {
+        throw new ErroRequisicao(401, "E-mail ou senha incorretos.");
+      },
+    });
     montar(<TelaLogin subtitulo="Plataforma X" status={status} marca={<span className="marca-x" />} />, f.cliente);
     expect(screen.getByRole("heading", { name: "Entrar" })).toBeTruthy();
     expect(screen.getByText("Plataforma X")).toBeTruthy();
@@ -104,7 +168,12 @@ describe("TelaLogin", () => {
     expect(screen.getByRole("alert").textContent).toBe("E-mail ou senha incorretos.");
   });
   it("mensagem de limite de tentativas; aviso de falta de administrador; busca o status sozinha", async () => {
-    const f = clienteFalso({ "GET /eu": () => null, "POST /auth/entrar": () => { throw new ErroRequisicao(429, "Muitas tentativas erradas. Tente de novo em 5 minutos."); } });
+    const f = clienteFalso({
+      "GET /eu": () => null,
+      "POST /auth/entrar": () => {
+        throw new ErroRequisicao(429, "Muitas tentativas erradas. Tente de novo em 5 minutos.");
+      },
+    });
     const buscar = vi.fn(async () => ({ version: "1.0.0", buildDate: "2026-01-02", sem_administrador: true }));
     montar(<TelaLogin subtitulo="X" buscarStatus={buscar} />, f.cliente);
     await waitFor(() => expect(screen.getByText(/Nenhum administrador cadastrado/)).toBeTruthy());
@@ -117,10 +186,15 @@ describe("TelaLogin", () => {
 
 describe("TelaTrocaSenha", () => {
   it("confere a confirmação, troca a senha e relê o usuário", async () => {
-    const f = clienteFalso({ "GET /eu": () => ({ ...ANA, precisa_trocar_senha: true }), "POST /auth/trocar-senha": () => ({ ok: true }) });
+    const f = clienteFalso({
+      "GET /eu": () => ({ ...ANA, precisa_trocar_senha: true }),
+      "POST /auth/trocar-senha": () => ({ ok: true }),
+    });
     montar(<TelaTrocaSenha />, f.cliente);
     await waitFor(() => expect(screen.getByText(/Olá, Ana!/)).toBeTruthy());
-    const [atual, nova, confirma] = [/^Senha provisória/, /^Nova senha/, /^Confirme a nova senha/].map((r) => screen.getByLabelText(r));
+    const [atual, nova, confirma] = [/^Senha provisória/, /^Nova senha/, /^Confirme a nova senha/].map((r) =>
+      screen.getByLabelText(r),
+    );
     fireEvent.change(atual, { target: { value: "prov1234" } });
     fireEvent.change(nova, { target: { value: "Nova12345" } });
     fireEvent.change(confirma, { target: { value: "Outra123" } });
@@ -128,7 +202,10 @@ describe("TelaTrocaSenha", () => {
     expect(screen.getByRole("alert").textContent).toBe("A confirmação não confere com a nova senha.");
     fireEvent.change(confirma, { target: { value: "Nova12345" } });
     await act(async () => fireEvent.submit(atual.closest("form")!));
-    expect(f.chamar).toHaveBeenCalledWith("POST", "/auth/trocar-senha", { senha_atual: "prov1234", nova_senha: "Nova12345" });
+    expect(f.chamar).toHaveBeenCalledWith("POST", "/auth/trocar-senha", {
+      senha_atual: "prov1234",
+      nova_senha: "Nova12345",
+    });
     expect(f.chamar.mock.calls.filter((c) => c[1] === "/eu")).toHaveLength(2);
   });
 });
@@ -137,7 +214,14 @@ describe("Casca", () => {
   const props = { nome: "Orçamentos", versao: "2.0.0", data: "2026-09-27", embutido: false };
   it("nome, versão, abas e menu do usuário com itens do módulo (admin), trocar senha e sair", async () => {
     const f = clienteFalso({ "GET /eu": () => ANA, "POST /auth/sair": () => ({ ok: true }) });
-    montar(<Casca {...props} abas={<nav>ABAS</nav>} itensMenu={[{ rotulo: "Usuários", caminho: "/usuarios", somenteAdministrador: true }]} />, f.cliente);
+    montar(
+      <Casca
+        {...props}
+        abas={<nav>ABAS</nav>}
+        itensMenu={[{ rotulo: "Usuários", caminho: "/usuarios", somenteAdministrador: true }]}
+      />,
+      f.cliente,
+    );
     expect(screen.getByText("Orçamentos").closest("a")!.getAttribute("href")).toBe("/");
     expect(screen.getByText("v2.0.0 · 27/09/2026")).toBeTruthy();
     expect(screen.getByText("ABAS")).toBeTruthy();
@@ -156,7 +240,10 @@ describe("Casca", () => {
   });
   it("item só de administrador some para quem não é; dentro do portal a casca não aparece", async () => {
     const f = clienteFalso({ "GET /eu": () => ({ ...ANA, administrador: false }) });
-    const { unmount } = montar(<Casca {...props} itensMenu={[{ rotulo: "Usuários", caminho: "/usuarios", somenteAdministrador: true }]} />, f.cliente);
+    const { unmount } = montar(
+      <Casca {...props} itensMenu={[{ rotulo: "Usuários", caminho: "/usuarios", somenteAdministrador: true }]} />,
+      f.cliente,
+    );
     fireEvent.click(await screen.findByRole("button", { name: /Ana Souza/ }));
     expect(screen.queryByRole("menuitem", { name: /Usuários/ })).toBeNull();
     unmount();
@@ -170,24 +257,36 @@ describe("avisos e modal", () => {
     vi.useFakeTimers();
     let avisos!: ReturnType<typeof useAvisos>;
     const Pega = () => ((avisos = useAvisos()), null);
-    render(<ProvedorAvisos><Pega /></ProvedorAvisos>);
+    render(
+      <ProvedorAvisos>
+        <Pega />
+      </ProvedorAvisos>,
+    );
     act(() => avisos.avisar("Salvo."));
     expect(screen.getByText("Salvo.").className).toBe("aviso aviso-ok");
     act(() => avisos.erro(new Error("Falhou.")));
     expect(screen.getByText("Falhou.").className).toBe("aviso aviso-erro");
-    act(() => { vi.advanceTimersByTime(3100); });
+    act(() => {
+      vi.advanceTimersByTime(3100);
+    });
     expect(screen.queryByText("Salvo.")).toBeNull();
     expect(screen.getByText("Falhou.")).toBeTruthy();
     vi.useRealTimers();
     let resposta: Promise<boolean>;
-    act(() => { resposta = avisos.confirmar({ titulo: "Excluir?", acao: "Excluir", perigo: true }); });
+    act(() => {
+      resposta = avisos.confirmar({ titulo: "Excluir?", acao: "Excluir", perigo: true });
+    });
     expect(screen.getByRole("button", { name: "Excluir" }).className).toBe("botao botao-perigo");
     fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
     await expect(resposta!).resolves.toBe(true);
   });
   it("Modal fecha com Esc e clicando fora", () => {
     const fechar = vi.fn();
-    render(<Modal titulo="Janela" aoFechar={fechar}>conteúdo</Modal>);
+    render(
+      <Modal titulo="Janela" aoFechar={fechar}>
+        conteúdo
+      </Modal>,
+    );
     fireEvent.keyDown(window, { key: "Escape" });
     fireEvent.mouseDown(document.querySelector(".fundo-modal")!);
     expect(fechar).toHaveBeenCalledTimes(2);

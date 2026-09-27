@@ -29,7 +29,8 @@ export interface DescricaoIdentidade {
 /** Estrutura das tabelas de identidade no schema atual (primeiro do search_path), sem depender da ordem das colunas. */
 export async function descreverIdentidade(banco: Banco): Promise<DescricaoIdentidade> {
   const tabelas = [...TABELAS_IDENTIDADE];
-  const semSchema = (s: string) => s.replace(/\b[a-z_][a-z0-9_]*\.(perfis|usuarios|sessoes|fn_tg_atualizado_em)\b/g, "$1");
+  const semSchema = (s: string) =>
+    s.replace(/\b[a-z_][a-z0-9_]*\.(perfis|usuarios|sessoes|fn_tg_atualizado_em)\b/g, "$1");
   const col = await banco.query<{ t: string; c: string; tipo: string; nn: boolean; def: string | null }>(
     `SELECT a.attrelid::regclass::text AS t, a.attname AS c, format_type(a.atttypid, a.atttypmod) AS tipo,
             a.attnotnull AS nn, pg_get_expr(d.adbin, d.adrelid) AS def
@@ -53,13 +54,18 @@ export async function descreverIdentidade(banco: Banco): Promise<DescricaoIdenti
        FROM pg_trigger WHERE NOT tgisinternal AND tgrelid = ANY (SELECT to_regclass(x) FROM unnest($1::text[]) x)`,
     [tabelas],
   );
-  const enumr = await banco.query<{ v: string }>(
-    "SELECT unnest(enum_range(NULL::tipo_usuario))::text AS v",
-  ).catch(() => ({ rows: [] as { v: string }[], rowCount: 0 }));
+  const enumr = await banco
+    .query<{ v: string }>("SELECT unnest(enum_range(NULL::tipo_usuario))::text AS v")
+    .catch(() => ({ rows: [] as { v: string }[], rowCount: 0 }));
   const chave = (t: string, n: string) => `${semSchema(t)}.${n}`;
-  const ordenar = (o: Record<string, string>) => Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)));
+  const ordenar = (o: Record<string, string>) =>
+    Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)));
   return {
-    colunas: ordenar(Object.fromEntries(col.rows.map((r) => [chave(r.t, r.c), `${r.tipo} | ${r.nn ? "not null" : "null"} | ${r.def ?? ""}`]))),
+    colunas: ordenar(
+      Object.fromEntries(
+        col.rows.map((r) => [chave(r.t, r.c), `${r.tipo} | ${r.nn ? "not null" : "null"} | ${r.def ?? ""}`]),
+      ),
+    ),
     restricoes: ordenar(Object.fromEntries(res.rows.map((r) => [chave(r.t, r.n), semSchema(r.def)]))),
     indices: ordenar(Object.fromEntries(idx.rows.map((r) => [chave(r.t, r.n), semSchema(r.def)]))),
     triggers: ordenar(Object.fromEntries(trg.rows.map((r) => [chave(r.t, r.n), semSchema(r.def)]))),

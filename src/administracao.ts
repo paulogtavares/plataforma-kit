@@ -38,7 +38,8 @@ export async function rotasAdministracao(app: FastifyInstance, o: OpcoesAdminist
   const { banco } = o;
   const validas = new Set(o.catalogo.map((p) => p.chave));
   const nomeInterna = o.catalogo.find((p) => p.chave === o.permissaoInterna)?.nome;
-  if (o.permissaoInterna && !nomeInterna) throw new Error(`permissaoInterna "${o.permissaoInterna}" não está no catálogo.`);
+  if (o.permissaoInterna && !nomeInterna)
+    throw new Error(`permissaoInterna "${o.permissaoInterna}" não está no catálogo.`);
   const ERRO_ADMIN_EXTERNO = `Administradores precisam de um perfil com a permissão “${nomeInterna}”.`;
   const usuarioDe = (req: unknown) => (req as { usuario: { id: string } }).usuario;
 
@@ -204,7 +205,10 @@ export async function rotasAdministracao(app: FastifyInstance, o: OpcoesAdminist
       .parse(req.body);
     const proprio = req.params.id === usuarioDe(req).id;
     if (proprio && (b.administrador === false || b.ativo === false)) {
-      throw new ErroApi(400, "Você não pode remover o seu próprio acesso de administrador. Peça a outro administrador.");
+      throw new ErroApi(
+        400,
+        "Você não pode remover o seu próprio acesso de administrador. Peça a outro administrador.",
+      );
     }
     if (!Object.keys(b).length) throw new ErroApi(400, "Nada para alterar.");
 
@@ -224,7 +228,9 @@ export async function rotasAdministracao(app: FastifyInstance, o: OpcoesAdminist
         if (perfil.interno) dados.cliente_id = null;
       }
       const chaves = Object.keys(dados);
-      const sets = chaves.map((k, i) => (k === "tipo" ? `tipo = $${i + 2}::tipo_usuario` : `${k} = $${i + 2}`)).join(", ");
+      const sets = chaves
+        .map((k, i) => (k === "tipo" ? `tipo = $${i + 2}::tipo_usuario` : `${k} = $${i + 2}`))
+        .join(", ");
       await c.query(`UPDATE usuarios SET ${sets} WHERE id = $1`, [req.params.id, ...chaves.map((k) => dados[k])]);
       // desativado: derruba as sessões abertas na hora
       if (b.ativo === false) await c.query("DELETE FROM sessoes WHERE usuario_id = $1", [req.params.id]);

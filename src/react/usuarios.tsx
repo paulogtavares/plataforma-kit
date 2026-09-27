@@ -41,7 +41,13 @@ export interface ExtensaoUsuario<U extends UsuarioAdmin = UsuarioAdmin, E = any>
   /** estado inicial dos campos extras */
   inicial: (usuario: U | null) => E;
   /** renderizados depois da opção de administrador */
-  Campos: ComponentType<{ usuario: U | null; externo: boolean; perfil: PerfilAdmin | undefined; valor: E; mudar: (v: E) => void }>;
+  Campos: ComponentType<{
+    usuario: U | null;
+    externo: boolean;
+    perfil: PerfilAdmin | undefined;
+    valor: E;
+    mudar: (v: E) => void;
+  }>;
   /** dados extras enviados ao criar ou editar (não vale na edição do próprio usuário) */
   dados?: (valor: E, externo: boolean) => Record<string, unknown>;
   /** depois de criar ou editar (ex.: gravar os acessos) */
@@ -74,7 +80,13 @@ export interface PropsTelaUsuarios<U extends UsuarioAdmin = UsuarioAdmin> {
 }
 
 export function dataHora(iso: string) {
-  return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 /** Carrega uma lista da API e permite recarregar. */
@@ -137,7 +149,8 @@ export function TelaUsuarios<U extends UsuarioAdmin = UsuarioAdmin>(p: PropsTela
     if (u.ativo) {
       const ok = await confirmar({
         titulo: `Desativar ${u.nome}?`,
-        texto: "A pessoa perde o acesso na hora. O histórico e os comentários dela são mantidos, e você pode reativar depois.",
+        texto:
+          "A pessoa perde o acesso na hora. O histórico e os comentários dela são mantidos, e você pode reativar depois.",
         acao: "Desativar",
         perigo: true,
       });
@@ -318,7 +331,11 @@ function EditarUsuario<U extends UsuarioAdmin>({
     setSalvando(true);
     try {
       const base = { nome: f.nome, email: f.email, perfil_id: f.perfil_id };
-      const dados = { ...base, ...(extensao?.dados?.(extra, externo) ?? {}), administrador: !externo && f.administrador };
+      const dados = {
+        ...base,
+        ...(extensao?.dados?.(extra, externo) ?? {}),
+        administrador: !externo && f.administrador,
+      };
       let id = usuario?.id;
       let nova: { nome: string; email: string; senha: string } | undefined;
       if (usuario) {
@@ -354,7 +371,12 @@ function EditarUsuario<U extends UsuarioAdmin>({
           <legend className="rotulo-campo">Perfil de acesso</legend>
           {perfis.map((x) => (
             <label key={x.id} className={f.perfil_id === x.id ? "ativo" : ""}>
-              <input type="radio" name="perfil" checked={f.perfil_id === x.id} onChange={() => setF({ ...f, perfil_id: x.id })} />
+              <input
+                type="radio"
+                name="perfil"
+                checked={f.perfil_id === x.id}
+                onChange={() => setF({ ...f, perfil_id: x.id })}
+              />
               <span>
                 <strong>{x.nome}</strong>
                 {x.descricao && <small>{x.descricao}</small>}
@@ -548,10 +570,20 @@ function EditarPerfil({
       <form className="formulario" onSubmit={salvar}>
         <div className="grade-2">
           <Campo rotulo="Nome do perfil">
-            <input required autoFocus value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Diretoria" />
+            <input
+              required
+              autoFocus
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex.: Diretoria"
+            />
           </Campo>
           <Campo rotulo="Descrição">
-            <input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Para quem é este perfil" />
+            <input
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              placeholder="Para quem é este perfil"
+            />
           </Campo>
         </div>
         {grupos.map(([grupo, itens]) => (

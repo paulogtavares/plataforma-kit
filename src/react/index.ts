@@ -4,6 +4,11 @@ export { ProvedorSessao, useSessao, type PropsProvedorSessao, type Sessao, type 
 export { ModalTrocarSenha, TelaLogin, TelaTrocaSenha, type StatusLogin } from "./login.js";
 export { Casca, MenuUsuario, type ItemMenuUsuario } from "./casca.js";
 export {
-  SenhaProvisoria, TelaUsuarios, dataHora,
-  type ExtensaoUsuario, type PerfilAdmin, type PropsTelaUsuarios, type UsuarioAdmin,
+  SenhaProvisoria,
+  TelaUsuarios,
+  dataHora,
+  type ExtensaoUsuario,
+  type PerfilAdmin,
+  type PropsTelaUsuarios,
+  type UsuarioAdmin,
 } from "./usuarios.js";

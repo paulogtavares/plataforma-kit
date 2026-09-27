@@ -175,7 +175,13 @@ function FormularioSenha({
         />
       </Campo>
       <Campo rotulo="Nova senha" dica="Pelo menos 8 caracteres, com letras e números.">
-        <input type="password" autoComplete="new-password" required value={nova} onChange={(e) => setNova(e.target.value)} />
+        <input
+          type="password"
+          autoComplete="new-password"
+          required
+          value={nova}
+          onChange={(e) => setNova(e.target.value)}
+        />
       </Campo>
       <Campo rotulo="Confirme a nova senha">
         <input
