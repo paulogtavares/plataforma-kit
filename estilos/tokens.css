@@ -1,0 +1,76 @@
+/* =====================================================================
+   Tokens comuns da plataforma: superfícies, tinta, linhas, estados, raio,
+   sombra e fonte. Cada módulo importa este arquivo antes dos tokens dele.
+   Tema claro em :root; escuro pelo sistema (prefers-color-scheme) ou forçado
+   com data-theme="dark" (o portal manda a mensagem "tema").
+   ===================================================================== */
+:root {
+  --papel: #f3f5f8;
+  --superficie: #ffffff;
+  --superficie-2: #f8f9fb;
+  --tinta: #18202e;
+  --grafite: #535c6e;
+  --apagado: #8a93a5;
+  --linha: #e3e7ee;
+  --linha-forte: #cdd3dd;
+  --selecao: #eaf0fb;
+  --atraso: #cf3a3a;
+  --ok: #1f8a53;
+  --raio: 6px;
+  --sombra: 0 1px 2px rgba(24, 32, 46, 0.06), 0 8px 24px rgba(24, 32, 46, 0.08);
+  --fonte: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --texto-invertido: #fff;
+  --primario-hover: #2a3447;
+  --perigo-hover: #b32f2f;
+  --erro-fundo: #fdf1f1;
+  --erro-borda: #f4cccc;
+  --aviso-fundo: #fff7e8;
+  --aviso-borda: #f1dfb8;
+  --aviso-texto: #7a5208;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --papel: #0f141c;
+    --superficie: #161c26;
+    --superficie-2: #1b2230;
+    --tinta: #e6e9ef;
+    --grafite: #a6afbf;
+    --apagado: #768093;
+    --linha: #262f3f;
+    --linha-forte: #364158;
+    --selecao: #1d2b45;
+    --atraso: #f06464;
+    --ok: #45c083;
+    --sombra: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
+    --primario-hover: #ffffff;
+    --erro-fundo: #2e1616;
+    --erro-borda: #5a2626;
+    --aviso-fundo: #2e2512;
+    --aviso-borda: #4d3d1a;
+    --aviso-texto: #f0cf8a;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --papel: #0f141c;
+  --superficie: #161c26;
+  --superficie-2: #1b2230;
+  --tinta: #e6e9ef;
+  --grafite: #a6afbf;
+  --apagado: #768093;
+  --linha: #262f3f;
+  --linha-forte: #364158;
+  --selecao: #1d2b45;
+  --atraso: #f06464;
+  --ok: #45c083;
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
+  --primario-hover: #ffffff;
+  --erro-fundo: #2e1616;
+  --erro-borda: #5a2626;
+  --aviso-fundo: #2e2512;
+  --aviso-borda: #4d3d1a;
+  --aviso-texto: #f0cf8a;
+}

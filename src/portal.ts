@@ -1,32 +1,58 @@
 /**
- * Token do portal (AUTH_MODO=portal): o portal autentica a pessoa e repassa a requisição
- * ao módulo com um token no cabeçalho (padrão: X-Portal-Token).
+ * Token da plataforma (AUTH_MODO=portal): o portal autentica a pessoa e repassa cada requisição
+ * ao módulo com um token curto no cabeçalho X-Plataforma-Token.
  *
- * Formato: JWT compacto assinado com HMAC-SHA256 (HS256) com um segredo compartilhado
- * entre o portal e os módulos. Declarações usadas:
- *   email (obrigatório)  e-mail do usuário, igual ao cadastrado no módulo
- *   exp   (obrigatório)  validade, em segundos desde 1970 (tokens curtos: minutos)
- *   iat   (opcional)     emissão
- *   iss   (opcional)     emissor; conferido quando o módulo configura `emissor`
+ * Formato: JWT compacto assinado com HMAC-SHA256 (HS256) e o segredo SEGREDO_PLATAFORMA,
+ * compartilhado entre o portal e os módulos. Declarações (contrato do plano, fases 1 e 2):
+ *   iss        "portal" (obrigatório)
+ *   aud        id do módulo, ou lista de ids (obrigatório): token de um módulo não vale em outro
+ *   sub        id do usuário no portal, uuid (obrigatório)
+ *   email      e-mail do usuário (obrigatório)
+ *   tipo       "interno" ou "externo" (obrigatório)
+ *   permissoes lista de chaves do módulo (obrigatório; as que não estão no catálogo são ignoradas)
+ *   exp        validade em segundos (obrigatório, poucos minutos); iat opcional
+ *   nome, cliente_id (uuid ou null), admin (boolean): opcionais
  *
  * Usa Web Crypto (sem dependências), então roda no Node e no navegador.
  */
 import { ErroApi } from "./erros.js";
 
-export interface DeclaracoesPortal {
+/** Nome do cabeçalho (em minúsculas, como o Node entrega). */
+export const CABECALHO_TOKEN = "x-plataforma-token";
+/** Emissor exigido no token. */
+export const EMISSOR = "portal";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** O que o portal assina. */
+export interface DeclaracoesPlataforma {
+  iss: string;
+  aud: string | string[];
+  sub: string;
   email: string;
+  tipo: "interno" | "externo";
+  permissoes: string[];
   exp: number;
   iat?: number;
-  iss?: string;
+  nome?: string;
+  cliente_id?: string | null;
+  admin?: boolean;
   [outra: string]: unknown;
 }
 
-export interface OpcoesPortal {
-  /** segredo compartilhado com o portal (mínimo 32 caracteres) */
+/** O que o módulo recebe depois de conferir (e-mail normalizado, nome e cliente preenchidos). */
+export interface TokenPlataforma extends DeclaracoesPlataforma {
+  nome: string;
+  cliente_id: string | null;
+  admin: boolean;
+}
+
+export interface OpcoesVerificacao {
+  /** SEGREDO_PLATAFORMA (mínimo 32 caracteres) */
   segredo: string;
-  /** se definido, o token precisa ter iss igual a este valor */
-  emissor?: string;
-  /** folga para diferença de relógio, em segundos (padrão 60) */
+  /** id deste módulo: precisa estar em aud */
+  modulo: string;
+  /** folga para diferença de relógio, em segundos (padrão 30) */
   folgaSegundos?: number;
 }
 
@@ -39,8 +65,7 @@ function base64url(bytes: Uint8Array) {
 }
 function deBase64url(texto: string): Uint8Array<ArrayBuffer> {
   if (!/^[A-Za-z0-9_-]*$/.test(texto)) throw new Error("base64url inválido");
-  const b64 = texto.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((texto.length + 3) % 4);
-  const bin = atob(b64);
+  const bin = atob(texto.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((texto.length + 3) % 4));
   const bytes = new Uint8Array(new ArrayBuffer(bin.length));
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes;
@@ -51,12 +76,12 @@ const chave = (segredo: string, uso: KeyUsage) =>
   ]);
 
 export function validarSegredo(segredo: string | undefined): string {
-  if (!segredo || segredo.length < 32) throw new Error("PORTAL_SEGREDO precisa ter pelo menos 32 caracteres.");
+  if (!segredo || segredo.length < 32) throw new Error("SEGREDO_PLATAFORMA precisa ter pelo menos 32 caracteres.");
   return segredo;
 }
 
 /** Gera um token (usado nos testes e como referência para a equipe do portal). */
-export async function assinarTokenPortal(declaracoes: DeclaracoesPortal, segredo: string) {
+export async function assinarTokenPlataforma(declaracoes: DeclaracoesPlataforma, segredo: string) {
   const cabecalho = base64url(codificador.encode(JSON.stringify({ alg: "HS256", typ: "JWT" })));
   const corpo = base64url(codificador.encode(JSON.stringify(declaracoes)));
   const assinatura = await globalThis.crypto.subtle.sign(
@@ -67,12 +92,12 @@ export async function assinarTokenPortal(declaracoes: DeclaracoesPortal, segredo
   return `${cabecalho}.${corpo}.${base64url(new Uint8Array(assinatura))}`;
 }
 
-/** Confere assinatura, algoritmo, validade e emissor. Lança ErroApi 401 com motivo genérico para a tela. */
-export async function verificarTokenPortal(
+/** Confere assinatura, algoritmo, validade, emissor, destino e campos. Lança ErroApi 401 com motivo genérico. */
+export async function verificarTokenPlataforma(
   token: string,
-  o: OpcoesPortal,
+  o: OpcoesVerificacao,
   agora = Date.now(),
-): Promise<DeclaracoesPortal> {
+): Promise<TokenPlataforma> {
   const recusar = (motivo: string): never => {
     const e = new ErroApi(401, "Acesso pelo portal inválido ou expirado. Entre novamente pelo portal.");
     (e as any).motivo = motivo; // para o log; não vai para a tela
@@ -82,11 +107,11 @@ export async function verificarTokenPortal(
   if (partes.length !== 3) recusar("formato");
   const [c, d, a] = partes;
   let cabecalho: any;
-  let declaracoes: any;
+  let dados: any;
   let assinatura: Uint8Array<ArrayBuffer>;
   try {
     cabecalho = JSON.parse(new TextDecoder().decode(deBase64url(c)));
-    declaracoes = JSON.parse(new TextDecoder().decode(deBase64url(d)));
+    dados = JSON.parse(new TextDecoder().decode(deBase64url(d)));
     assinatura = deBase64url(a);
   } catch {
     return recusar("codificação");
@@ -99,11 +124,26 @@ export async function verificarTokenPortal(
     codificador.encode(`${c}.${d}`),
   );
   if (!valida) recusar("assinatura");
-  const folga = o.folgaSegundos ?? 60;
+  const folga = o.folgaSegundos ?? 30;
   const segundos = Math.floor(agora / 1000);
-  if (typeof declaracoes?.exp !== "number" || declaracoes.exp + folga < segundos) recusar("expirado");
-  if (typeof declaracoes.iat === "number" && declaracoes.iat - folga > segundos) recusar("emitido no futuro");
-  if (typeof declaracoes.email !== "string" || !declaracoes.email.includes("@")) recusar("sem e-mail");
-  if (o.emissor && declaracoes.iss !== o.emissor) recusar("emissor");
-  return { ...declaracoes, email: declaracoes.email.trim().toLowerCase() } as DeclaracoesPortal;
+  if (typeof dados?.exp !== "number" || dados.exp + folga < segundos) recusar("expirado");
+  if (typeof dados.iat === "number" && dados.iat - folga > segundos) recusar("emitido no futuro");
+  if (dados.iss !== EMISSOR) recusar(`emissor ${dados.iss}`);
+  const destinos = Array.isArray(dados.aud) ? dados.aud : [dados.aud];
+  if (!destinos.includes(o.modulo)) recusar(`destino ${dados.aud}`);
+  if (typeof dados.sub !== "string" || !UUID.test(dados.sub)) recusar("sub");
+  if (typeof dados.email !== "string" || !dados.email.includes("@")) recusar("email");
+  if (dados.tipo !== "interno" && dados.tipo !== "externo") recusar("tipo");
+  if (dados.cliente_id != null && (typeof dados.cliente_id !== "string" || !UUID.test(dados.cliente_id)))
+    recusar("cliente_id");
+  if (!Array.isArray(dados.permissoes) || dados.permissoes.some((p: unknown) => typeof p !== "string"))
+    recusar("permissoes");
+  const email = dados.email.trim().toLowerCase();
+  return {
+    ...dados,
+    email,
+    nome: typeof dados.nome === "string" && dados.nome.trim() ? dados.nome.trim().slice(0, 200) : email.split("@")[0],
+    cliente_id: dados.cliente_id ?? null,
+    admin: dados.admin === true,
+  };
 }

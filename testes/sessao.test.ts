@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { rotasAutenticacao } from "../src/autenticacao.js";
 import { ErroApi } from "../src/erros.js";
-import { assinarTokenPortal } from "../src/portal.js";
+import { assinarTokenPlataforma } from "../src/portal.js";
 import { criarSessao, lerCookie } from "../src/sessao.js";
 import { bancoComUsuarios } from "./apoio.js";
 
@@ -17,7 +17,8 @@ async function montar(banco: Banco, modo: "local" | "portal") {
     todasPermissoes: TODAS,
     modo,
     nomeCookie: "mod_sessao",
-    portal: { segredo: SEGREDO, emissor: "portal" },
+    modulo: "mod",
+    segredoPlataforma: SEGREDO,
   });
   const app = Fastify();
   app.setErrorHandler((e: any, _req, reply) =>
@@ -70,16 +71,24 @@ describe("modo local", () => {
     expect((await entrar("beto@x.com", "errada")).json().erro).toBe("E-mail ou senha incorretos.");
     expect((await entrar("caio@x.com")).json().erro).toBe("E-mail ou senha incorretos.");
   });
-  it("ignora x-usuario-id e x-portal-token no modo local", async () => {
+  it("ignora x-usuario-id e x-plataforma-token no modo local", async () => {
     const id = (await banco.query("SELECT id FROM usuarios WHERE email = 'ana@x.com'")).rows[0].id;
-    const token = await assinarTokenPortal(
-      { email: "ana@x.com", exp: Math.floor(Date.now() / 1000) + 60, iss: "portal" },
+    const token = await assinarTokenPlataforma(
+      {
+        iss: "portal",
+        aud: "mod",
+        sub: id,
+        email: "ana@x.com",
+        tipo: "interno",
+        permissoes: [],
+        exp: Math.floor(Date.now() / 1000) + 60,
+      },
       SEGREDO,
     );
     const r = await app.inject({
       method: "GET",
       url: "/api/protegida",
-      headers: { "x-usuario-id": id, "x-portal-token": token },
+      headers: { "x-usuario-id": id, "x-plataforma-token": token },
     });
     expect(r.statusCode).toBe(401);
   });
@@ -110,11 +119,26 @@ describe("modo local", () => {
   });
 });
 
-describe("modo portal", () => {
+describe("modo portal (contrato da plataforma)", () => {
   let banco: Banco;
   let app: FastifyInstance;
-  const token = (email: string, exp = Math.floor(Date.now() / 1000) + 300) =>
-    assinarTokenPortal({ email, exp, iss: "portal" }, SEGREDO);
+  const SUB_NOVO = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+  const token = (d: Record<string, unknown>) =>
+    assinarTokenPlataforma(
+      {
+        iss: "portal",
+        aud: "mod",
+        sub: SUB_NOVO,
+        email: "nova@x.com",
+        tipo: "interno",
+        permissoes: ["mod.ver"],
+        exp: Math.floor(Date.now() / 1000) + 300,
+        ...d,
+      } as any,
+      SEGREDO,
+    );
+  const comToken = async (d: Record<string, unknown> = {}) =>
+    app.inject({ method: "GET", url: "/api/protegida", headers: { "x-plataforma-token": await token(d) } });
   beforeAll(async () => {
     banco = await bancoComUsuarios();
     app = await montar(banco, "portal");
@@ -124,40 +148,45 @@ describe("modo portal", () => {
     await banco.fechar();
   });
 
-  it("aceita o token do portal e carrega o usuário pelo e-mail", async () => {
-    const r = await app.inject({
-      method: "GET",
-      url: "/api/protegida",
-      headers: { "x-portal-token": await token("Beto@X.com") },
-    });
+  it("primeiro acesso cria o usuário local pelo sub; permissões vêm do token, filtradas pelo catálogo", async () => {
+    const r = await comToken({ nome: "Nova Pessoa", permissoes: ["mod.ver", "outro.modulo", "mod.inexistente"] });
     expect(r.statusCode).toBe(200);
-    expect(r.json()).toMatchObject({ email: "beto@x.com", precisa_trocar_senha: false });
+    expect(r.json()).toMatchObject({
+      id: SUB_NOVO,
+      nome: "Nova Pessoa",
+      email: "nova@x.com",
+      permissoes: ["mod.ver"],
+      precisa_trocar_senha: false,
+    });
+    expect((await banco.query("SELECT count(*)::int AS n FROM usuarios WHERE id = $1", [SUB_NOVO])).rows[0].n).toBe(1);
   });
-  it("sem token, token inválido, usuário inativo ou desconhecido: recusa", async () => {
+  it("acessos seguintes atualizam nome e e-mail; admin só para interno", async () => {
+    expect((await comToken({ nome: "Nome Novo", admin: true })).json()).toMatchObject({
+      nome: "Nome Novo",
+      administrador: true,
+      permissoes: ["mod.ver", "mod.editar"],
+    });
+    expect((await comToken({ tipo: "externo", admin: true })).json()).toMatchObject({
+      tipo: "externo",
+      administrador: false,
+    });
+  });
+  it("usuário desativado no módulo continua bloqueado", async () => {
+    await banco.query("UPDATE usuarios SET ativo = false WHERE id = $1", [SUB_NOVO]);
+    expect((await comToken()).statusCode).toBe(403);
+    await banco.query("UPDATE usuarios SET ativo = true WHERE id = $1", [SUB_NOVO]);
+  });
+  it("e-mail já usado por outro usuário local: 409 com mensagem clara", async () => {
+    const r = await comToken({ sub: "11111111-2222-4333-8444-555555555555", email: "beto@x.com" });
+    expect(r.statusCode).toBe(409);
+    expect(r.json().erro).toMatch(/já está cadastrado/);
+  });
+  it("sem token, token de outro módulo ou inválido: 401; login por senha desligado", async () => {
     expect((await app.inject({ method: "GET", url: "/api/protegida" })).statusCode).toBe(401);
+    expect((await comToken({ aud: "outro" })).statusCode).toBe(401);
     expect(
-      (await app.inject({ method: "GET", url: "/api/protegida", headers: { "x-portal-token": "abc" } })).statusCode,
+      (await app.inject({ method: "GET", url: "/api/protegida", headers: { "x-plataforma-token": "abc" } })).statusCode,
     ).toBe(401);
-    expect(
-      (
-        await app.inject({
-          method: "GET",
-          url: "/api/protegida",
-          headers: { "x-portal-token": await token("caio@x.com") },
-        })
-      ).statusCode,
-    ).toBe(403);
-    expect(
-      (
-        await app.inject({
-          method: "GET",
-          url: "/api/protegida",
-          headers: { "x-portal-token": await token("ninguem@x.com") },
-        })
-      ).statusCode,
-    ).toBe(403);
-  });
-  it("não aceita cookie de sessão local nem login por senha", async () => {
     const r = await app.inject({
       method: "POST",
       url: "/api/auth/entrar",
@@ -166,7 +195,12 @@ describe("modo portal", () => {
     expect(r.statusCode).toBe(400);
     expect(r.json().erro).toMatch(/pelo portal/);
   });
-  it("exige o segredo ao criar a sessão em modo portal", () => {
-    expect(() => criarSessao({ banco, todasPermissoes: TODAS, modo: "portal" })).toThrow(/PORTAL_SEGREDO/);
+  it("exige segredo e id do módulo ao criar a sessão em modo portal", () => {
+    expect(() => criarSessao({ banco, todasPermissoes: TODAS, modo: "portal", modulo: "mod" })).toThrow(
+      /SEGREDO_PLATAFORMA/,
+    );
+    expect(() => criarSessao({ banco, todasPermissoes: TODAS, modo: "portal", segredoPlataforma: SEGREDO })).toThrow(
+      /id do módulo/,
+    );
   });
 });

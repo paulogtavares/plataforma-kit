@@ -1,72 +1,77 @@
 import { describe, expect, it } from "vitest";
-import { assinarTokenPortal, validarSegredo, verificarTokenPortal } from "../src/portal.js";
+import {
+  assinarTokenPlataforma,
+  validarSegredo,
+  verificarTokenPlataforma,
+  type DeclaracoesPlataforma,
+} from "../src/portal.js";
 
 const SEGREDO = "segredo-de-teste-com-mais-de-32-caracteres";
 const agora = Date.UTC(2026, 8, 26, 12, 0, 0);
 const s = Math.floor(agora / 1000);
+const SUB = "3f2b8c1e-4d5a-4b6c-8d7e-9f0a1b2c3d4e";
 const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");
+const base = (extra: Partial<DeclaracoesPlataforma> = {}): DeclaracoesPlataforma => ({
+  iss: "portal",
+  aud: "cronogramas",
+  sub: SUB,
+  email: "ana@empresa.com",
+  tipo: "interno",
+  permissoes: ["cronogramas.criar"],
+  exp: s + 300,
+  ...extra,
+});
+const verificar = async (d: DeclaracoesPlataforma, segredo = SEGREDO) =>
+  verificarTokenPlataforma(
+    await assinarTokenPlataforma(d, segredo),
+    { segredo: SEGREDO, modulo: "cronogramas" },
+    agora,
+  );
 
-describe("token do portal", () => {
-  it("aceita token válido e normaliza o e-mail", async () => {
-    const t = await assinarTokenPortal({ email: " Ana@Empresa.com ", exp: s + 300, iat: s, iss: "portal" }, SEGREDO);
-    const d = await verificarTokenPortal(t, { segredo: SEGREDO, emissor: "portal" }, agora);
-    expect(d.email).toBe("ana@empresa.com");
+describe("token da plataforma (contrato do portal)", () => {
+  it("aceita token válido, normaliza e-mail e completa nome, cliente e admin", async () => {
+    const t = await verificar(base({ email: " Ana@Empresa.com ", aud: ["orc", "cronogramas"] }));
+    expect(t).toMatchObject({ email: "ana@empresa.com", nome: "ana", cliente_id: null, admin: false, sub: SUB });
+    expect((await verificar(base({ nome: "  Ana Souza ", admin: true }))).nome).toBe("Ana Souza");
   });
-  it("recusa expirado (com folga de 60 s) e emitido no futuro", async () => {
-    const velho = await assinarTokenPortal({ email: "a@b.c", exp: s - 61 }, SEGREDO);
-    await expect(verificarTokenPortal(velho, { segredo: SEGREDO }, agora)).rejects.toMatchObject({
-      status: 401,
-      motivo: "expirado",
-    });
-    const dentroDaFolga = await assinarTokenPortal({ email: "a@b.c", exp: s - 30 }, SEGREDO);
-    await expect(verificarTokenPortal(dentroDaFolga, { segredo: SEGREDO }, agora)).resolves.toBeTruthy();
-    const futuro = await assinarTokenPortal({ email: "a@b.c", exp: s + 900, iat: s + 600 }, SEGREDO);
-    await expect(verificarTokenPortal(futuro, { segredo: SEGREDO }, agora)).rejects.toMatchObject({
-      motivo: "emitido no futuro",
-    });
+  it("aud: token de outro módulo é recusado", async () => {
+    await expect(verificar(base({ aud: "orc" }))).rejects.toMatchObject({ status: 401, motivo: "destino orc" });
   });
-  it("recusa assinatura errada, segredo errado e conteúdo alterado", async () => {
-    const t = await assinarTokenPortal({ email: "a@b.c", exp: s + 300 }, SEGREDO);
-    await expect(verificarTokenPortal(t, { segredo: SEGREDO + "x" }, agora)).rejects.toMatchObject({
-      motivo: "assinatura",
-    });
-    const [c, , a] = t.split(".");
-    const alterado = `${c}.${b64({ email: "admin@b.c", exp: s + 300 })}.${a}`;
-    await expect(verificarTokenPortal(alterado, { segredo: SEGREDO }, agora)).rejects.toMatchObject({
-      motivo: "assinatura",
-    });
+  it("iss precisa ser portal", async () => {
+    await expect(verificar(base({ iss: "outro" }))).rejects.toMatchObject({ motivo: "emissor outro" });
   });
-  it('recusa alg "none" e outros algoritmos', async () => {
-    const semAssinatura = `${b64({ alg: "none", typ: "JWT" })}.${b64({ email: "a@b.c", exp: s + 300 })}.`;
-    await expect(verificarTokenPortal(semAssinatura, { segredo: SEGREDO }, agora)).rejects.toMatchObject({
+  it("campos obrigatórios: sub (uuid), email, tipo, permissoes; cliente_id uuid quando vier", async () => {
+    await expect(verificar(base({ sub: "123" }))).rejects.toMatchObject({ motivo: "sub" });
+    await expect(verificar(base({ email: "sem-arroba" }))).rejects.toMatchObject({ motivo: "email" });
+    await expect(verificar(base({ tipo: "admin" as any }))).rejects.toMatchObject({ motivo: "tipo" });
+    await expect(verificar(base({ permissoes: "x" as any }))).rejects.toMatchObject({ motivo: "permissoes" });
+    await expect(verificar(base({ cliente_id: "abc" }))).rejects.toMatchObject({ motivo: "cliente_id" });
+  });
+  it("validade: expirado (folga de 30 s) e emitido no futuro", async () => {
+    await expect(verificar(base({ exp: s - 31 }))).rejects.toMatchObject({ motivo: "expirado" });
+    await expect(verificar(base({ exp: s - 20 }))).resolves.toBeTruthy();
+    await expect(verificar(base({ iat: s + 120 }))).rejects.toMatchObject({ motivo: "emitido no futuro" });
+  });
+  it("assinatura, segredo e conteúdo alterado", async () => {
+    await expect(verificar(base(), SEGREDO + "x")).rejects.toMatchObject({ motivo: "assinatura" });
+    const [c, , a] = (await assinarTokenPlataforma(base(), SEGREDO)).split(".");
+    const alterado = `${c}.${b64({ ...base(), permissoes: ["cronogramas.tudo"] })}.${a}`;
+    await expect(
+      verificarTokenPlataforma(alterado, { segredo: SEGREDO, modulo: "cronogramas" }, agora),
+    ).rejects.toMatchObject({ motivo: "assinatura" });
+  });
+  it('recusa alg "none", outros algoritmos e formato inválido, sem revelar o motivo na tela', async () => {
+    const o = { segredo: SEGREDO, modulo: "cronogramas" };
+    await expect(verificarTokenPlataforma(`${b64({ alg: "none" })}.${b64(base())}.`, o, agora)).rejects.toMatchObject({
       motivo: "algoritmo none",
     });
-    const rs = `${b64({ alg: "RS256" })}.${b64({ email: "a@b.c", exp: s + 300 })}.xx`;
-    await expect(verificarTokenPortal(rs, { segredo: SEGREDO }, agora)).rejects.toMatchObject({
-      motivo: "algoritmo RS256",
-    });
-  });
-  it("recusa emissor diferente, sem e-mail e formato inválido", async () => {
-    const t = await assinarTokenPortal({ email: "a@b.c", exp: s + 300, iss: "outro" }, SEGREDO);
-    await expect(verificarTokenPortal(t, { segredo: SEGREDO, emissor: "portal" }, agora)).rejects.toMatchObject({
-      motivo: "emissor",
-    });
-    const semEmail = await assinarTokenPortal({ email: "", exp: s + 300 }, SEGREDO);
-    await expect(verificarTokenPortal(semEmail, { segredo: SEGREDO }, agora)).rejects.toMatchObject({
-      motivo: "sem e-mail",
-    });
-    await expect(verificarTokenPortal("abc", { segredo: SEGREDO }, agora)).rejects.toMatchObject({ motivo: "formato" });
-    await expect(verificarTokenPortal("a.b!.c", { segredo: SEGREDO }, agora)).rejects.toMatchObject({
-      motivo: "codificação",
-    });
-  });
-  it("a mensagem para a tela não revela o motivo", async () => {
-    await expect(verificarTokenPortal("abc", { segredo: SEGREDO }, agora)).rejects.toThrow(
+    await expect(verificarTokenPlataforma("abc", o, agora)).rejects.toThrow(
       "Acesso pelo portal inválido ou expirado. Entre novamente pelo portal.",
     );
+    await expect(verificarTokenPlataforma("a.b!.c", o, agora)).rejects.toMatchObject({ motivo: "codificação" });
   });
-  it("exige segredo com 32+ caracteres", () => {
-    expect(() => validarSegredo("curto")).toThrow(/32 caracteres/);
+  it("SEGREDO_PLATAFORMA com 32+ caracteres", () => {
+    expect(() => validarSegredo("curto")).toThrow(/SEGREDO_PLATAFORMA/);
     expect(validarSegredo(SEGREDO)).toBe(SEGREDO);
   });
 });

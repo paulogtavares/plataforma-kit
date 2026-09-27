@@ -1,6 +1,6 @@
 {
   "name": "plataforma-kit",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Base comum dos módulos da plataforma (Cronogramas, Orçamentos, C.P): login local ou pelo portal, sessão, permissões, erros, migrações, base de servidor e peças de tela",
   "private": true,
   "type": "module",
@@ -47,7 +47,24 @@
     "./prettier": {
       "types": "./dist/prettier.d.ts",
       "default": "./dist/prettier.js"
-    }
+    },
+    "./ambiente": {
+      "types": "./dist/ambiente.d.ts",
+      "default": "./dist/ambiente.js"
+    },
+    "./usuariosTeste": {
+      "types": "./dist/usuariosTeste.d.ts",
+      "default": "./dist/usuariosTeste.js"
+    },
+    "./servidor": {
+      "types": "./dist/servidor.d.ts",
+      "default": "./dist/servidor.js"
+    },
+    "./web": {
+      "types": "./dist/web.d.ts",
+      "default": "./dist/web.js"
+    },
+    "./tokens.css": "./estilos/tokens.css"
   },
   "files": [
     "dist",

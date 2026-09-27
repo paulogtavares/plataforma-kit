@@ -1,5 +1,21 @@
 # plataforma-kit
 
+Instalação em cada módulo, com versão fixa por tag (repositório privado da organização):
+
+```json
+"dependencies": { "plataforma-kit": "github:infracommerce/plataforma-kit#v1.2.0" }
+```
+
+O npm clona a tag e roda o `prepare`, que compila o `dist/`. Para atualizar, troque a tag e rode `npm install`.
+Nunca edite a cópia dentro de `node_modules`: mudança no kit é sempre uma versão nova aqui, com tag e registro
+no `CHANGELOG.md` (o que mudou e qual módulo pediu).
+
+**Acesso ao repositório privado.** Quem instala a partir do código-fonte (desenvolvedores, CI) precisa de acesso
+de leitura ao repositório no GitHub. O pacote de entrega dos módulos (`server.js` + `public/`) já leva o kit
+compilado dentro, então o deploy do pacote no Railway **não** precisa de token. Só quem fizer o build no Railway a
+partir do código-fonte precisa de um token do GitHub nas variáveis do serviço (alternativa aprovada: publicar no
+GitHub Packages, sem mudar mais nada).
+
 Base comum dos módulos da plataforma (Cronogramas, Orçamentos, C.P): login local ou pelo portal, sessão,
 permissões, erros e migrações. Extraído do Cronogramas v2.0.0.
 
@@ -68,21 +84,30 @@ vira `cronogramas.modelos.ver`.
 | `local` (padrão) | E-mail e senha no módulo; sessão em cookie `HttpOnly; SameSite=Lax` (`Secure` em produção), validade de 7 dias renovada com o uso; bloqueio de 5 minutos após 5 erros; troca de senha provisória obrigatória |
 | `portal`         | O portal autentica e repassa a requisição com um token no cabeçalho `X-Portal-Token`. Login por senha e troca de senha respondem que o acesso é pelo portal                                                  |
 
-### Token do portal
+### Token da plataforma (contrato do portal)
 
-JWT compacto assinado com **HS256** e um segredo compartilhado (`PORTAL_SEGREDO`, 32+ caracteres).
+Com `AUTH_MODO=portal`, o portal repassa cada requisição com um JWT **HS256** no cabeçalho `X-Plataforma-Token`,
+assinado com `SEGREDO_PLATAFORMA` (32+ caracteres, o mesmo no portal e nos módulos).
 
-| Declaração | Obrigatória | Uso                                                        |
-| ---------- | ----------- | ---------------------------------------------------------- |
-| `email`    | sim         | e-mail do usuário, igual ao cadastrado no módulo           |
-| `exp`      | sim         | validade em segundos (use tokens curtos, de minutos)       |
-| `iat`      | não         | emissão (recusa token emitido no futuro)                   |
-| `iss`      | não         | emissor; conferido quando o módulo define `PORTAL_EMISSOR` |
+| Declaração                    | Obrigatória | Uso                                                                                   |
+| ----------------------------- | ----------- | ------------------------------------------------------------------------------------- |
+| `iss`                         | sim         | `"portal"`                                                                            |
+| `aud`                         | sim         | id do módulo (ou lista): token emitido para um módulo não vale em outro               |
+| `sub`                         | sim         | id do usuário no portal (uuid); o módulo cria ou atualiza o usuário local com esse id |
+| `email`, `tipo`               | sim         | e-mail e `interno`/`externo`                                                          |
+| `permissoes`                  | sim         | chaves do módulo; as que não estão no catálogo são ignoradas                          |
+| `exp`                         | sim         | poucos minutos (folga de 30 s para relógio); `iat` opcional                           |
+| `nome`, `cliente_id`, `admin` | não         | `admin` só vale para `interno`                                                        |
 
-Recusa `alg` diferente de `HS256` (inclusive `none`), assinatura inválida, token expirado (folga de 60 s para
-relógio) e usuário inativo ou não cadastrado. A tela recebe uma mensagem genérica; o motivo técnico vai para o log.
+Recusa `alg` diferente de `HS256` (inclusive `none`), assinatura inválida, token expirado e usuário desativado
+no módulo. A tela recebe uma mensagem genérica; o motivo técnico vai para o log. No modo `local`, o cabeçalho é
+ignorado.
 
-> Formato proposto pelo kit v1. Enquanto o portal não estiver pronto, os módulos rodam em `AUTH_MODO=local`.
+### Modo embutido (tela dentro do portal)
+
+`criarEmbutido({ modulo })` detecta o iframe e troca mensagens só com a mesma origem:
+módulo → portal `rota-alterada` (`{ tipo, modulo, caminho, url, titulo }`) e `sessao-expirada`;
+portal → módulo `navegar` (`{ caminho }`, sem recarregar) e `tema` (`claro`, `escuro` ou `sistema`).
 
 ## Lint e formatação
 
