@@ -3,10 +3,15 @@
 Instalação em cada módulo, com versão fixa por tag (repositório privado da organização):
 
 ```json
-"dependencies": { "plataforma-kit": "github:infracommerce/plataforma-kit#v1.3.0" }
+"dependencies": { "plataforma-kit": "github:paulogtavares/plataforma-kit#v1.3.1" }
 ```
 
-O npm clona a tag e roda o `prepare`, que compila o `dist/`. Para atualizar, troque a tag e rode `npm install`.
+O repositório fica em `github.com/paulogtavares/plataforma-kit` (privado). O npm clona a tag e roda o `prepare`, que
+compila o `dist/`. Para atualizar, troque a tag e rode `npm install`. O `package-lock.json` do módulo registra o kit
+por SSH (`git+ssh://git@github.com/...`); quem usa só HTTPS roda uma vez
+`git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"`. Se o repositório for transferido
+para a organização `infracommerce`, o GitHub mantém histórico, tags e redirecionamento: basta trocar o endereço nas
+dependências dos módulos e rodar `npm install`.
 Nunca edite a cópia dentro de `node_modules`: mudança no kit é sempre uma versão nova aqui, com tag e registro
 no `CHANGELOG.md` (o que mudou e qual módulo pediu).
 

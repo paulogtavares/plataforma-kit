@@ -1,5 +1,14 @@
 # plataforma-kit — histórico
 
+## 1.3.1 · 2026-09-27
+
+Só documentação e metadados, sem mudança de código (o `dist/` compilado é idêntico ao da 1.3.0). Pedido pelo
+Cronogramas, depois da publicação do repositório.
+
+- README: instalação pelo endereço publicado (`github:paulogtavares/plataforma-kit#v1.3.1`), acesso por HTTPS e o que
+  fazer se o repositório for transferido para `infracommerce`.
+- `package.json`: campo `repository` apontando para `github.com/paulogtavares/plataforma-kit`.
+
 ## 1.3.0 · 2026-09-27
 
 Pedido pelo **Orçamentos** (etapas 4 e 5: identidade, login e telas) e necessário para o início do C.P. O Cronogramas
