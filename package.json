@@ -1,7 +1,7 @@
 {
-  "name": "@plataforma/kit",
+  "name": "plataforma-kit",
   "version": "1.1.0",
-  "description": "Base comum dos módulos da plataforma: login (local ou pelo portal), sessão, permissões, erros e migrações",
+  "description": "Base comum dos módulos da plataforma (Cronogramas, Orçamentos, C.P): login local ou pelo portal, sessão, permissões, erros, migrações, base de servidor e peças de tela",
   "private": true,
   "type": "module",
   "engines": {
@@ -51,35 +51,44 @@
   },
   "files": [
     "dist",
+    "estilos",
     "README.md",
     "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.testes.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "npm run build && eslint .",
+    "formatar": "prettier --write .",
+    "formatacao": "prettier --check ."
   },
   "peerDependencies": {
-    "fastify": "^5.0.0",
-    "zod": "^3.25.0",
-    "eslint": "^9.0.0",
     "@eslint/js": "^9.0.0",
-    "typescript-eslint": "^8.0.0",
-    "eslint-plugin-react-hooks": "^7.0.0",
+    "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "fastify": "^5.0.0",
     "globals": "*",
-    "prettier": "^3.0.0"
+    "prettier": "^3.0.0",
+    "typescript-eslint": "^8.0.0"
   },
   "license": "UNLICENSED",
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
     "@eslint/js": "^9.39.5",
+    "@types/node": "^24.19.0",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "fastify": "^5.12.5",
     "globals": "^17.12.0",
     "prettier": "^3.9.9",
-    "typescript-eslint": "^8.70.1"
+    "typescript": "5.9",
+    "typescript-eslint": "^8.70.1",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
   },
   "peerDependenciesMeta": {
     "eslint": {
@@ -103,5 +112,12 @@
     "prettier": {
       "optional": true
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/infracommerce/plataforma-kit.git"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
   }
 }

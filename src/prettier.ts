@@ -1,7 +1,7 @@
 /**
  * Configuração comum do Prettier para os módulos da plataforma.
  *   // prettier.config.js
- *   export { default } from "@plataforma/kit/prettier";
+ *   export { default } from "plataforma-kit/prettier";
  */
 const configuracao = {
   printWidth: 120,

@@ -1,7 +1,7 @@
 /**
  * Configuração comum do ESLint (flat config) para os módulos da plataforma.
  *   // eslint.config.js
- *   import { configuracaoEslint } from "@plataforma/kit/eslint";
+ *   import { configuracaoEslint } from "plataforma-kit/eslint";
  *   export default configuracaoEslint({ react: ["web/src/**"], ignorar: ["**\/dist/**"] });
  *
  * Foco em erros reais (hooks do React, variáveis não usadas, promessas esquecidas em código
