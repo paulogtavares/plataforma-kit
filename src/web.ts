@@ -129,8 +129,8 @@ export function criarEmbutido(o: OpcoesEmbutido) {
         if (
           m?.tipo === "navegar" &&
           typeof m.caminho === "string" &&
-          m.caminho.startsWith("/") &&
-          !m.caminho.startsWith("//")
+          // "/implantacao"; nunca "//site" nem "/\\site" (o navegador trata "\\" como "/")
+          /^\/(?![/\\])/.test(m.caminho)
         )
           acoes.navegar(m.caminho);
         else if (m?.tipo === "tema" && ["claro", "escuro", "sistema"].includes(m.tema))

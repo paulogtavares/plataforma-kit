@@ -125,6 +125,8 @@ describe("modo embutido", () => {
       ouvintes.message({ data, origin, source });
     chega({ tipo: "navegar", caminho: "/implantacao" });
     chega({ tipo: "navegar", caminho: "//malicioso.com" });
+    chega({ tipo: "navegar", caminho: "/\\malicioso.com" });
+    chega({ tipo: "navegar", caminho: "implantacao" });
     chega({ tipo: "navegar", caminho: "/x" }, "https://outro.com");
     chega({ tipo: "navegar", caminho: "/y" }, "https://plataforma.com", {});
     chega({ tipo: "tema", tema: "escuro" });
