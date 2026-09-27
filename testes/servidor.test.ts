@@ -108,5 +108,9 @@ describe("prepararServidor e servirFront", () => {
     ).toContain('<base href="/mod/" />');
     expect((await app.inject({ method: "GET", url: "/assets/a.js" })).headers["cache-control"]).toMatch(/immutable/);
     expect((await app.inject({ method: "GET", url: "/%E0%A4%A" })).statusCode).toBe(400);
+    const head = await app.inject({ method: "HEAD", url: "/" });
+    expect(head.statusCode).toBe(200);
+    expect(head.headers["content-type"]).toMatch(/text\/html/);
+    expect((await app.inject({ method: "POST", url: "/qualquer" })).statusCode).toBe(404);
   });
 });

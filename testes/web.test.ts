@@ -47,6 +47,8 @@ describe("cliente de API", () => {
     expect(aoExpirar).toHaveBeenCalledTimes(1);
     await expect(c.post("/auth/entrar", {})).rejects.toBeInstanceOf(ErroRequisicao);
     expect(aoExpirar).toHaveBeenCalledTimes(1); // senha errada no login não é sessão expirada
+    await expect(c.get("/eu")).rejects.toMatchObject({ status: 401 });
+    expect(aoExpirar).toHaveBeenCalledTimes(1); // abrir sem login não é sessão expirada
   });
   it("sem conexão: status 0 com a mensagem do módulo", async () => {
     vi.stubGlobal(

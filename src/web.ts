@@ -42,7 +42,7 @@ export interface OpcoesCliente {
   base?: string;
   /** mensagem quando o servidor não responde */
   semConexao?: string;
-  /** chamado quando a API responde 401 fora das rotas de login */
+  /** chamado quando a API responde 401 fora das rotas de login e de /eu (sessão que existia e expirou) */
   aoExpirarSessao?: () => void;
 }
 
@@ -66,7 +66,8 @@ export function criarClienteApi(o: OpcoesCliente = {}) {
     }
     if (r.status === 204) return undefined as T;
     const dados: any = await r.json().catch(() => ({}));
-    if (r.status === 401 && !caminho.startsWith("auth/")) o.aoExpirarSessao?.();
+    // 401 no login (auth/*) é senha errada, e em /eu é "ninguém logado ainda": nenhum dos dois é sessão expirada
+    if (r.status === 401 && !caminho.startsWith("auth/") && caminho !== "eu") o.aoExpirarSessao?.();
     if (!r.ok) throw new ErroRequisicao(r.status, dados.erro ?? `Erro ${r.status}`, dados.codigo);
     return dados as T;
   }

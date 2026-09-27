@@ -180,7 +180,8 @@ const TIPOS: Record<string, string> = {
 /** Serve o front compilado (pasta/public); o index.html sai com o prefixo da requisição. */
 export function servirFront(app: FastifyInstance, pasta: string | undefined) {
   app.setNotFoundHandler((req, reply) => {
-    if (req.url.startsWith("/api/") || !pasta || req.method !== "GET") {
+    // HEAD também: monitores de disponibilidade costumam usar HEAD /
+    if (req.url.startsWith("/api/") || !pasta || (req.method !== "GET" && req.method !== "HEAD")) {
       return reply.code(404).send({ erro: "Rota não encontrada." });
     }
     const base = resolve(pasta, "public");

@@ -27,6 +27,18 @@
   --aviso-fundo: #fff7e8;
   --aviso-borda: #f1dfb8;
   --aviso-texto: #7a5208;
+
+  /* peças de tela do kit (casca e selos de situação) */
+  --destaque: #2f6bdb;
+  --topo-fundo: var(--tinta);
+  --topo-versao: #aeb6c4;
+  --selo-concluido-fundo: #e6f4ec;
+  --selo-concluido-texto: var(--ok);
+  --selo-pausado-fundo: #fff3df;
+  --selo-pausado-texto: #99600a;
+  --selo-cancelado-fundo: #f1f2f4;
+  --selo-modelo-fundo: #efeafc;
+  --selo-modelo-texto: #5b3fb8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -50,6 +62,14 @@
     --aviso-fundo: #2e2512;
     --aviso-borda: #4d3d1a;
     --aviso-texto: #f0cf8a;
+    --destaque: #5b8cf0;
+    --topo-fundo: #0a0e14;
+    --selo-concluido-fundo: #173427;
+    --selo-concluido-texto: #6fd3a0;
+    --selo-pausado-fundo: #3a2c12;
+    --selo-pausado-texto: #f0c26b;
+    --selo-modelo-fundo: #2a2345;
+    --selo-modelo-texto: #b9a6f3;
   }
 }
 
@@ -73,4 +93,12 @@
   --aviso-fundo: #2e2512;
   --aviso-borda: #4d3d1a;
   --aviso-texto: #f0cf8a;
+  --destaque: #5b8cf0;
+  --topo-fundo: #0a0e14;
+  --selo-concluido-fundo: #173427;
+  --selo-concluido-texto: #6fd3a0;
+  --selo-pausado-fundo: #3a2c12;
+  --selo-pausado-texto: #f0c26b;
+  --selo-modelo-fundo: #2a2345;
+  --selo-modelo-texto: #b9a6f3;
 }
