@@ -3,7 +3,7 @@
 Instalação em cada módulo, com versão fixa por tag (repositório privado da organização):
 
 ```json
-"dependencies": { "plataforma-kit": "github:infracommerce/plataforma-kit#v1.2.0" }
+"dependencies": { "plataforma-kit": "github:infracommerce/plataforma-kit#v1.3.0" }
 ```
 
 O npm clona a tag e roda o `prepare`, que compila o `dist/`. Para atualizar, troque a tag e rode `npm install`.
@@ -25,18 +25,28 @@ coisa do modo navegador de cada módulo, nunca do servidor.
 
 ## Pontos de entrada
 
-| Importação                    | Roda no navegador? | O que tem                                                                               |
-| ----------------------------- | ------------------ | --------------------------------------------------------------------------------------- |
-| `plataforma-kit/erros`        | sim                | `ErroApi`, `proibido`, `naoEncontrado`, `traduzirErroPg(e, restricoesDoModulo)`         |
-| `plataforma-kit/permissoes`   | sim                | `pode`, `criarCatalogo`, `chaveDoModulo`, `prefixar`, `exigirAdministrador`             |
-| `plataforma-kit/sessao`       | sim                | `criarSessao` (`autenticar`, `carregarUsuario`), `lerCookie`, `hashToken`               |
-| `plataforma-kit/portal`       | sim                | `verificarTokenPortal`, `assinarTokenPortal`, `validarSegredo`                          |
-| `plataforma-kit/seguranca`    | não (node:crypto)  | senhas (scrypt), tokens, senha provisória, limite de tentativas                         |
-| `plataforma-kit/autenticacao` | não                | rotas Fastify `/api/auth/entrar`, `/api/auth/sair`, `/api/eu`, `/api/auth/trocar-senha` |
-| `plataforma-kit/migrador`     | não                | `migrar`: estrutura inicial num banco novo e migrações registradas                      |
-| `plataforma-kit/tipos`        | sim                | `Banco`, `BancoComTransacao`, `UsuarioPlataforma`                                       |
-| `plataforma-kit/eslint`       | — (ferramenta)     | `configuracaoEslint({ react, ignorar })`: configuração comum do ESLint 9                |
-| `plataforma-kit/prettier`     | — (ferramenta)     | configuração comum do Prettier 3 (120 colunas, aspas duplas, vírgula final)             |
+| Importação                       | Roda no navegador? | O que tem                                                                                                                     |
+| -------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `plataforma-kit/erros`           | sim                | `ErroApi`, `proibido`, `naoEncontrado`, `traduzirErroPg(e, restricoesDoModulo)`                                               |
+| `plataforma-kit/permissoes`      | sim                | `pode`, `criarCatalogo`, `chaveDoModulo`, `prefixar`, `exigirAdministrador`                                                   |
+| `plataforma-kit/sessao`          | sim                | `criarSessao` (`autenticar`, `carregarUsuario`), `lerCookie`, `hashToken`                                                     |
+| `plataforma-kit/portal`          | sim                | `verificarTokenPlataforma`, `assinarTokenPlataforma`, `validarSegredo`, `CABECALHO_TOKEN`                                     |
+| `plataforma-kit/seguranca`       | não (node:crypto)  | senhas (scrypt), tokens, senha provisória, limite de tentativas                                                               |
+| `plataforma-kit/autenticacao`    | não                | rotas Fastify `/api/auth/entrar`, `/api/auth/sair`, `/api/eu`, `/api/auth/trocar-senha`                                       |
+| `plataforma-kit/migrador`        | não                | `migrar`: identidade e estrutura num banco novo, migrações registradas                                                        |
+| `plataforma-kit/identidade`      | não                | `scriptIdentidade`, `SQL_IDENTIDADE`, `descreverIdentidade` (arquivo em `sql/identidade.sql`)                                 |
+| `plataforma-kit/administracao`   | não                | `rotasAdministracao`: `/api/admin/*` de usuários e perfis (exige administrador)                                               |
+| `plataforma-kit/ambiente`        | não                | `lerAmbiente`, `lerAcesso`, `bancoEmNuvem`: produção/nuvem, `MODO_TESTE` (ignorado em nuvem), `HOST`, `DADOS_DIR`, login      |
+| `plataforma-kit/usuariosTeste`   | não                | `auditarUsuariosDeTeste`: bloqueia em produção usuários de teste com a senha conhecida                                        |
+| `plataforma-kit/servidor`        | não                | `prepararServidor` (cabeçalhos, `/api/saude`, `/api/status`, `/modulo.json`, login, erros com código), `servirFront`, prefixo |
+| `plataforma-kit/web`             | sim                | `BASE`, `BASENAME`, `enderecoTela`, `criarClienteApi`, `ErroRequisicao`, `criarEmbutido`, `aplicarTema`                       |
+| `plataforma-kit/react`           | sim (React)        | `ProvedorSessao`, `useSessao`, `TelaLogin`, `TelaTrocaSenha`, `Casca`, `TelaUsuarios`, `ProvedorAvisos`, `Modal`, `Campo`     |
+| `plataforma-kit/tokens.css`      | sim                | cores, raio, sombra e fonte comuns (claro e escuro), casca e selos                                                            |
+| `plataforma-kit/componentes.css` | sim                | estilos das peças de tela (importe depois de `tokens.css`)                                                                    |
+| `plataforma-kit/identidade.sql`  | — (arquivo)        | o SQL de identidade, para quem quiser ler ou aplicar à mão                                                                    |
+| `plataforma-kit/tipos`           | sim                | `Banco`, `BancoComTransacao`, `UsuarioPlataforma`                                                                             |
+| `plataforma-kit/eslint`          | — (ferramenta)     | `configuracaoEslint({ react, ignorar })`: configuração comum do ESLint 9                                                      |
+| `plataforma-kit/prettier`        | — (ferramenta)     | configuração comum do Prettier 3 (120 colunas, aspas duplas, vírgula final)                                                   |
 
 ## Uso num módulo
 
@@ -55,7 +65,8 @@ const sessao = criarSessao({
   todasPermissoes: catalogo.todas, // o que o administrador recebe
   modo: process.env.AUTH_MODO === "portal" ? "portal" : "local",
   nomeCookie: process.env.COOKIE_SESSAO ?? "orcamentos_sessao",
-  portal: { segredo: process.env.PORTAL_SEGREDO!, emissor: process.env.PORTAL_EMISSOR },
+  modulo: "orcamentos", // aud do token no modo portal
+  segredoPlataforma: process.env.SEGREDO_PLATAFORMA,
 });
 
 app.addHook("onRequest", async (req) => {
@@ -123,6 +134,89 @@ export { default } from "plataforma-kit/prettier";
 O ESLint foca em erros reais (hooks do React, variáveis não usadas, `==`), sem regras de estilo;
 a formatação é do Prettier. Instale no módulo: `eslint @eslint/js typescript-eslint eslint-plugin-react-hooks
 eslint-config-prettier globals prettier`.
+
+## Identidade e administração (1.3.0)
+
+As tabelas `perfis`, `usuarios` e `sessoes` vêm de `sql/identidade.sql`: exatamente as colunas que o kit lê e as
+restrições que ele traduz (`ux_usuarios_email`, `ck_admin_interno`), sem schema fixo (caem no schema do módulo pelo
+`search_path`). O migrador aplica o arquivo num banco novo **antes** da estrutura do módulo:
+
+```ts
+import { scriptIdentidade } from "plataforma-kit/identidade";
+await migrar(motor, {
+  tabelaReferencia: "orcamentos.orcamentos",
+  identidade: scriptIdentidade(),
+  base,
+  migracoes,
+  log,
+});
+```
+
+Colunas ou chaves próprias do módulo (ex.: `usuarios.cliente_id → clientes`) vão em migração do módulo.
+`descreverIdentidade(banco)` devolve a estrutura real em formato comparável, para testar que as tabelas do módulo são
+iguais às do kit.
+
+```ts
+import { rotasAdministracao } from "plataforma-kit/administracao";
+await app.register(rotasAdministracao, {
+  banco,
+  catalogo: catalogo.lista,
+  permissaoInterna: "orcamentos.custos.ver", // opcional: perfil sem ela = usuário externo (não pode ser administrador)
+  usuarios: { colunas: "c.nome AS cliente_nome", juncoes: "LEFT JOIN clientes c ON c.id = u.cliente_id" }, // opcional
+});
+```
+
+## Peças de tela em React (1.3.0)
+
+`react`, `react-router` e `lucide-react` são `peerDependencies`: o kit usa as versões instaladas no módulo (no Vite,
+use `resolve.dedupe` para os três). Não há dependência de biblioteca de cache.
+
+```tsx
+import "plataforma-kit/tokens.css";
+import "plataforma-kit/componentes.css";
+import {
+  Casca,
+  ProvedorAvisos,
+  ProvedorSessao,
+  TelaLogin,
+  TelaTrocaSenha,
+  TelaUsuarios,
+  useSessao,
+} from "plataforma-kit/react";
+import { BASENAME, criarClienteApi } from "plataforma-kit/web";
+
+const cliente = criarClienteApi({
+  aoExpirarSessao: () => window.dispatchEvent(new Event("orcamentos:sessao-expirada")),
+});
+
+function App() {
+  const { usuario, carregando } = useSessao();
+  if (carregando) return null;
+  if (!usuario) return <TelaLogin subtitulo="Orçamentos" buscarStatus={() => cliente.get("/status")} />;
+  if (usuario.precisa_trocar_senha) return <TelaTrocaSenha />;
+  return (
+    <>
+      <Casca
+        nome="Orçamentos"
+        versao="2.0.0"
+        data="2026-10-01"
+        itensMenu={[{ rotulo: "Usuários e perfis", caminho: "/usuarios", somenteAdministrador: true }]}
+      />
+      <Routes>
+        <Route path="/usuarios" element={<TelaUsuarios />} />
+      </Routes>
+    </>
+  );
+}
+
+// <BrowserRouter basename={BASENAME}><ProvedorAvisos>
+//   <ProvedorSessao cliente={cliente} eventoSessaoExpirada="orcamentos:sessao-expirada"><App /></ProvedorSessao>
+// </ProvedorAvisos></BrowserRouter>
+```
+
+A `TelaUsuarios` é montada pelo catálogo do módulo e aceita extensões: botões no cabeçalho, detalhes na linha do
+usuário e campos extras no formulário (`extensao`: estado inicial, componente, dados enviados e ação depois de salvar).
+O Cronogramas usa esse ponto para o cliente do usuário externo e os cronogramas liberados.
 
 ## Desenvolvimento
 

@@ -1,5 +1,26 @@
 # plataforma-kit — histórico
 
+## 1.3.0 · 2026-09-27
+
+Pedido pelo **Orçamentos** (etapas 4 e 5: identidade, login e telas) e necessário para o início do C.P. O Cronogramas
+passa a usar todas as peças abaixo sem mudança de comportamento (testes e capturas de tela iguais).
+
+- **Identidade** (`sql/identidade.sql`, `plataforma-kit/identidade`): `perfis`, `usuarios` e `sessoes` com as colunas
+  que o kit lê e as restrições que ele traduz, sem schema fixo. O migrador aceita `identidade` e a aplica num banco
+  novo antes da estrutura do módulo. `descreverIdentidade()` para testar que as tabelas do módulo são iguais.
+- **Administração** (`plataforma-kit/administracao`): rotas de usuários e perfis, extraídas do Cronogramas, com
+  permissão interna e colunas extras configuráveis.
+- **Peças de tela** (`plataforma-kit/react`): sessão (`ProvedorSessao`, `useSessao`, `pode`), login, troca de senha,
+  casca com menu do usuário, tela de usuários e perfis, avisos, confirmação, modal e campo. `react`, `react-router` e
+  `lucide-react` entram como `peerDependencies`.
+- **Estilos**: `plataforma-kit/componentes.css` para as peças de tela; tokens da casca e dos selos em `tokens.css`.
+- **Revisão** de `web.ts` e `servidor.ts` (reconstruídos no 1.2.0): 401 em `/api/eu` não é mais tratado como sessão
+  expirada (evita um aviso `sessao-expirada` falso ao portal ao abrir sem login); a mensagem `navegar` recusa `/\` além
+  de `//` e caminhos sem barra inicial; `HEAD` passa a servir a tela (monitores de disponibilidade). Os demais pontos
+  (validação do prefixo, caminhos estáticos, erros com código, origem das mensagens) foram conferidos sem mudança.
+- **Documentação**: a tabela de pontos de entrada do README, que tinha ficado desatualizada no 1.2.0, foi refeita.
+- Fora do 1.3.0: o cadastro de clientes continua em cada módulo até o portal.
+
 ## 1.2.0 · 2026-09-27
 
 Primeira versão publicada no repositório próprio (antes o kit era incubado em `pacotes/plataforma-kit` do
