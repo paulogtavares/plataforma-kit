@@ -3,16 +3,10 @@ import { PGlite } from "@electric-sql/pglite";
 import type { BancoComTransacao } from "../src/tipos.js";
 import type { MotorMigracao } from "../src/migrador.js";
 import { gerarHashSenha } from "../src/seguranca.js";
+import { SQL_IDENTIDADE } from "../src/identidade.js";
 
-export const ESTRUTURA = `
-  CREATE TABLE perfis (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), nome text NOT NULL, permissoes text[] NOT NULL DEFAULT '{}');
-  CREATE TABLE usuarios (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(), nome text NOT NULL, email text NOT NULL UNIQUE,
-    tipo text NOT NULL DEFAULT 'interno', cliente_id uuid, administrador boolean NOT NULL DEFAULT false,
-    precisa_trocar_senha boolean NOT NULL DEFAULT false, perfil_id uuid REFERENCES perfis(id),
-    ativo boolean NOT NULL DEFAULT true, senha_hash text, ultimo_acesso timestamptz);
-  CREATE TABLE sessoes (token_hash text PRIMARY KEY, usuario_id uuid NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    expira_em timestamptz NOT NULL, ip text, agente text);`;
+/** Estrutura de identidade: o próprio SQL do kit (os testes rodam contra o que os módulos vão usar). */
+export const ESTRUTURA = SQL_IDENTIDADE;
 
 export async function bancoDeTeste() {
   const db = await PGlite.create();
@@ -61,8 +55,8 @@ export async function bancoComUsuarios() {
     "INSERT INTO perfis (nome, permissoes) VALUES ('Equipe', '{mod.ver}') RETURNING id",
   );
   await banco.query(
-    `INSERT INTO usuarios (nome, email, administrador, perfil_id, senha_hash, ativo) VALUES
-      ('Ana', 'ana@x.com', true, $1, $2, true), ('Beto', 'beto@x.com', false, $1, $2, true), ('Caio', 'caio@x.com', false, $1, $2, false)`,
+    `INSERT INTO usuarios (nome, email, administrador, perfil_id, senha_hash, ativo, precisa_trocar_senha) VALUES
+      ('Ana', 'ana@x.com', true, $1, $2, true, false), ('Beto', 'beto@x.com', false, $1, $2, true, false), ('Caio', 'caio@x.com', false, $1, $2, false, false)`,
     [rows[0].id, hash],
   );
   return banco;

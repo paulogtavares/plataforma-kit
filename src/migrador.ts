@@ -22,6 +22,12 @@ export interface MotorMigracao {
 export interface OpcoesMigracao {
   /** tabela que só existe depois da estrutura inicial (ex.: "public.projetos") */
   tabelaReferencia: string;
+  /**
+   * tabelas de identidade do kit (scriptIdentidade() de "plataforma-kit/identidade"): num banco novo, aplicadas
+   * ANTES da estrutura do módulo. Módulos cuja estrutura já cria essas tabelas (o Cronogramas, de onde o SQL saiu)
+   * não passam este campo.
+   */
+  identidade?: Script;
   /** estrutura e carga inicial: só num banco vazio */
   base: Script[];
   /** usuários de teste: só num banco vazio (passe [] com o modo de teste desligado) */
@@ -37,7 +43,7 @@ export async function migrar(motor: MotorMigracao, o: OpcoesMigracao) {
     o.tabelaReferencia,
   ]);
   if (!r.rows[0]?.existe) {
-    for (const s of [...o.base, ...(o.teste ?? [])]) {
+    for (const s of [...(o.identidade ? [o.identidade] : []), ...o.base, ...(o.teste ?? [])]) {
       o.log(`Aplicando ${s.nome}…`);
       await motor.exec(s.sql);
       aplicados.push(s.nome);

@@ -64,16 +64,26 @@
       "types": "./dist/web.d.ts",
       "default": "./dist/web.js"
     },
-    "./tokens.css": "./estilos/tokens.css"
+    "./tokens.css": "./estilos/tokens.css",
+    "./identidade": {
+      "types": "./dist/identidade.d.ts",
+      "default": "./dist/identidade.js"
+    },
+    "./identidade.sql": "./sql/identidade.sql",
+    "./administracao": {
+      "types": "./dist/administracao.d.ts",
+      "default": "./dist/administracao.js"
+    }
   },
   "files": [
     "dist",
     "estilos",
+    "sql",
     "README.md",
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node scripts/embutir-sql.mjs && tsc -p tsconfig.json",
     "prepare": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.testes.json",
     "test": "vitest run",
