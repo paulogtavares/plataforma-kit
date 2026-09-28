@@ -1,5 +1,19 @@
 # plataforma-kit — histórico
 
+## 1.4.0 · 2026-09-28
+
+Pedido pelo **Cronogramas** (v2.1.0: tabelas no schema `cronogramas`). Compatível com o 1.3: quem não passa `schema`
+continua igual.
+
+- **Migrador com schema do módulo** (`schema`): cria o schema, exige que ele seja o primeiro do `search_path` da
+  conexão e cria a tabela `migracoes` nele.
+- `tabelaReferencia` aceita uma lista (banco existe se qualquer uma existir), para trocar de schema sem o banco parecer
+  vazio.
+- O registro `migracoes` é localizado pelo `search_path`: um registro antigo em `public` continua valendo e pode ser
+  movido por uma migração sem reaplicar nada; só é criado quando não existe.
+- A estrutura inicial (identidade e base) passa a ser registrada em `migracoes`. Num banco existente, os nomes são
+  acrescentados na primeira execução (sem rodar nada).
+
 ## 1.3.1 · 2026-09-27
 
 Só documentação e metadados, sem mudança de código (o `dist/` compilado é idêntico ao da 1.3.0). Pedido pelo

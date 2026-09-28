@@ -3,7 +3,7 @@
 Instalação em cada módulo, com versão fixa por tag (repositório privado da organização):
 
 ```json
-"dependencies": { "plataforma-kit": "github:paulogtavares/plataforma-kit#v1.3.1" }
+"dependencies": { "plataforma-kit": "github:paulogtavares/plataforma-kit#v1.4.0" }
 ```
 
 O repositório fica em `github.com/paulogtavares/plataforma-kit` (privado). O npm clona a tag e roda o `prepare`, que
@@ -170,6 +170,30 @@ await app.register(rotasAdministracao, {
   usuarios: { colunas: "c.nome AS cliente_nome", juncoes: "LEFT JOIN clientes c ON c.id = u.cliente_id" }, // opcional
 });
 ```
+
+## Migrador com schema do módulo (1.4.0)
+
+Cada módulo guarda as tabelas no próprio schema. A conexão usa `search_path = <schema>, public` e o migrador recebe
+o schema:
+
+```ts
+await migrar(motor, {
+  schema: "orcamentos", // criado se não existir; migracoes nasce nele
+  tabelaReferencia: "orcamentos.orcamentos", // ou uma lista, durante uma troca de schema
+  identidade: scriptIdentidade(),
+  base,
+  migracoes,
+  log,
+});
+```
+
+- O migrador **recusa rodar** se o schema não for o primeiro do `search_path` (evita criar objetos no lugar errado).
+- `tabelaReferencia` aceita uma lista: o banco existe se qualquer uma existir. Assim uma troca de schema não faz o
+  banco parecer vazio (ex.: `["cronogramas.projetos", "public.projetos"]`).
+- O registro `migracoes` é procurado pelo `search_path`: um registro antigo em `public` continua valendo, e uma
+  migração pode movê-lo para o schema do módulo sem reaplicar nada. Ele só é criado quando não existe em lugar nenhum.
+- A estrutura inicial (identidade e base) também fica registrada em `migracoes`.
+- Sem `schema`, tudo funciona como no 1.3 (objetos no schema atual da conexão).
 
 ## Peças de tela em React (1.3.0)
 
