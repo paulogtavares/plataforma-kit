@@ -39,13 +39,17 @@ describe("migrador", () => {
     );
     expect(colunas.rows.map((c: any) => c.column_name)).toEqual(["id", "nome"]);
     // só a estrutura inicial fica registrada; a migração que falhou, não
-    expect((await b.query("SELECT nome FROM migracoes ORDER BY nome")).rows.map((r: any) => r.nome)).toEqual(["01.sql"]);
+    expect((await b.query("SELECT nome FROM migracoes ORDER BY nome")).rows.map((r: any) => r.nome)).toEqual([
+      "01.sql",
+    ]);
     await b.fechar();
   });
 });
 
 describe("migrador com schema do módulo (troca de schema)", () => {
-  const base = [{ nome: "01.sql", sql: "CREATE TYPE cor AS ENUM ('azul'); CREATE TABLE coisas (id int PRIMARY KEY, c cor);" }];
+  const base = [
+    { nome: "01.sql", sql: "CREATE TYPE cor AS ENUM ('azul'); CREATE TABLE coisas (id int PRIMARY KEY, c cor);" },
+  ];
   // migração que move tudo de public para o schema (e é inofensiva num banco que já nasceu no schema)
   const mover = {
     nome: "m/08.sql",
@@ -63,7 +67,9 @@ describe("migrador com schema do módulo (troca de schema)", () => {
     log: () => {},
   });
   const ondeEsta = async (b: any, nome: string) =>
-    (await b.query("SELECT table_schema AS s FROM information_schema.tables WHERE table_name = $1", [nome])).rows.map((r: any) => r.s);
+    (await b.query("SELECT table_schema AS s FROM information_schema.tables WHERE table_name = $1", [nome])).rows.map(
+      (r: any) => r.s,
+    );
 
   it("banco novo: estrutura e registro nascem no schema, com a estrutura registrada", async () => {
     const b = await bancoDeTeste();
@@ -71,7 +77,10 @@ describe("migrador com schema do módulo (troca de schema)", () => {
     expect(await migrar(b.motor, opcoes([mover]))).toEqual(["01.sql", "m/08.sql"]);
     expect(await ondeEsta(b, "coisas")).toEqual(["mod"]);
     expect(await ondeEsta(b, "migracoes")).toEqual(["mod"]);
-    expect((await b.query("SELECT nome FROM migracoes ORDER BY nome")).rows.map((r: any) => r.nome)).toEqual(["01.sql", "m/08.sql"]);
+    expect((await b.query("SELECT nome FROM migracoes ORDER BY nome")).rows.map((r: any) => r.nome)).toEqual([
+      "01.sql",
+      "m/08.sql",
+    ]);
     expect(await migrar(b.motor, opcoes([mover]))).toEqual([]);
     await b.fechar();
   });
@@ -79,16 +88,28 @@ describe("migrador com schema do módulo (troca de schema)", () => {
   it("banco antigo em public: usa o registro antigo, não reaplica a estrutura e move tudo sem perder nada", async () => {
     const b = await bancoDeTeste();
     // versão anterior: tudo em public, com uma migração já registrada
-    await migrar(b.motor, { tabelaReferencia: "public.coisas", base, migracoes: [{ nome: "m/05.sql", sql: "INSERT INTO coisas VALUES (1, 'azul');" }], log: () => {} });
+    await migrar(b.motor, {
+      tabelaReferencia: "public.coisas",
+      base,
+      migracoes: [{ nome: "m/05.sql", sql: "INSERT INTO coisas VALUES (1, 'azul');" }],
+      log: () => {},
+    });
     await b.motor.exec("SET search_path = mod, public");
     const log: string[] = [];
-    const r = await migrar(b.motor, { ...opcoes([{ nome: "m/05.sql", sql: "SELECT 1/0;" }, mover]), log: (m) => log.push(m) });
+    const r = await migrar(b.motor, {
+      ...opcoes([{ nome: "m/05.sql", sql: "SELECT 1/0;" }, mover]),
+      log: (m) => log.push(m),
+    });
     expect(r).toEqual(["m/08.sql"]); // 05 não roda de novo (o registro antigo foi encontrado) e a base não é reaplicada
     expect(log.some((m) => m.startsWith("Aplicando"))).toBe(false);
     expect(await ondeEsta(b, "coisas")).toEqual(["mod"]);
     expect(await ondeEsta(b, "migracoes")).toEqual(["mod"]);
     expect((await b.query("SELECT * FROM coisas")).rows).toEqual([{ id: 1, c: "azul" }]);
-    expect((await b.query("SELECT nome FROM migracoes ORDER BY nome")).rows.map((x: any) => x.nome)).toEqual(["01.sql", "m/05.sql", "m/08.sql"]);
+    expect((await b.query("SELECT nome FROM migracoes ORDER BY nome")).rows.map((x: any) => x.nome)).toEqual([
+      "01.sql",
+      "m/05.sql",
+      "m/08.sql",
+    ]);
     expect(await migrar(b.motor, opcoes([mover]))).toEqual([]); // reiniciar não reaplica nada
     await b.fechar();
   });
